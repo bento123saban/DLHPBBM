@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontrol BBM DLHP</title>
+
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/dist/hamburgers.css">
+    <link rel="stylesheet" href="/font/fontawsome/css/all.css">
+    <!-- WebGL FX harus dimuat lebih dulu -->
+    <script src="/js/gl.js"></script>
+    
+</head>
+<body>
+
+    <nav class="vw-100 flex-beetwen clr-white">
+        <div class="nav-logo flex-start gap-10">
+            <div class="nav-img to-content-btn" data-target="#home">
+                <img src="/img/logo.png" alt="">
+            </div>
+            <h4 class="p-0 dis-none">DLHP Kota Ambon</h4>
+        </div>
+        <h5 class="">DLHP Kota Ambon</h5>
+        <div class="dis-none hamburger hamburger--collapse">
+            <div class="hamburger-box">
+                <div class="hamburger-inner white"></div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="nav-list grid-center dis-none">
+        
+    </div>
+    
+    <div class="main-bg fixed-top-left vh-100 vw-100">
+        <div class="wave-box default flex-end flex-column relative">
+            <div class="blob-parent dis-none absolute-top">
+                <div class="magicpattern"></div>
+            </div>
+            <div class="bg-img dis-none absolute-top grid-center pt-3">
+                <img src="/asset/ilustrat/qrCodeScanner.png">
+            </div>
+            <div class="wave-content">
+                <!--Waves Container-->
+                <svg class="waves relative w-100 h-100" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                    <defs>
+                        <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                    </defs>
+                    <g class="parallax">
+                        <use xlink:href="#gentle-wave" x="48" y="0" fill="#efefef70" />
+                        <use xlink:href="#gentle-wave" x="48" y="3" fill="#efefef50" />
+                        <use xlink:href="#gentle-wave" x="48" y="5" fill="#efefef30" />
+                        <use xlink:href="#gentle-wave" x="48" y="7" fill="#efefef" />
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-box" class="relative hidden">
+
+        <div class="content absolute-top w-100 h-100 clr-white" id="home">
+            <div class="blob-parent absolute-top">
+                <div class="magicpattern"></div>
+            </div>
+            <div class="bg-img absolute-top grid-center">
+                <img src="/asset/ilustrat/qrCodeScanner.png">
+            </div>
+            <h1 class="uppercase">Kontrol BBM DLHP</h1>
+            <p class="align-justify fz-14">Lorem ipsum dolor sit amet consectetur adipisicing elit.Ipsam modi aliquid dolorum ullam quam officia non amet, molestias nam exercitationem, facere in vero voluptates natus laudantium soluta aut itaque nisi.</p>
+            <div class="home-btn flex-center gap-15">
+                <div class="to-content-btn p-10 white flex-start gap-5 pointer" data-target="#scan">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Scanner</span>
+                </div>
+                <div class="to-content-btn p-10 white  flex-start gap-5 pointer" data-target="#code">
+                    <i class="fas fa-code fz-10 "></i>
+                    <span>Code</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content grid-center relative dis-none" id="scan">
+            <div id="container" class="relative">
+                <div class="skeleton-box"></div>
+                <img src="" alt="" id="img-preview" />
+                <div id="reader"></div>
+                <canvas id="debug-overlay"></canvas>
+                <h4 class="align-center fz-20 clr-white" id="scan-head-notif">...</h4>
+                <p class="scan-notif-text dis-none align-justify w-100 p-15 clr-white">
+                    Akses kamera ditolak. <br />
+                    Silahkan ubah izin akses kamera di pengaturan browser Anda agar dapat menggunakan fitur scanner atau tekan tombol <i class="fas fa-code"></i> untuk memasukan kode.
+                </p>
+                <div class="flex-evenly relative" id="cam-buttons">
+                    <button id="switch-camera" class="off"><i class="fas fa-camera-rotate pointer"></i></button>
+                    <button id="toggle-btn" class="off grid-center pointer"><i class="fas fa-qrcode fz-20 clr-default"></i></button>
+                    <button id="code-input-btn" class="off fz-2 to-content-btn" data-target="#code"><i class="fas fa-code pointer  "></i></button>
+                </div>
+                <div id="scan-guide-line" class="grid-center dis-none br-white">
+                    <div class="line ln1"></div>
+                    <div class="line ln2"></div>
+                    <div class="line ln3"></div>
+                    <div class="line ln4"></div>
+                </div>
+                <div class="loaders dis-none" id="scan-loaders">
+                    <div class="loaderx grid-center">
+                        <div class="loader-content relative clr-white">
+                            <div class="loader"></div>
+                            <div class="align-center fz-8 ping-text p-3"></div>
+                            <div class="align-center loader-text"></div>
+                        </div>
+                    </div>
+                </div>
+                <span id="result" class="absolute-center">text</span>
+            </div>
+        </div>
+        
+        <div class="content dis-none code-input grid-center p-20" id="code">
+            <div class="code-box p-20 borad-10 clr-white">
+                <h3 class="clr-white flex-beetwen w-100 m-0 pb-2">Input Code <i class="fas fa-qrcode clr-grey fz-10 capitalize to-content-btn" data-target="#scan"> scan</i></h3>
+                <span class="align-justify dis-block mb-2 fz-14">Lorem ipsum dolor, sit amet consectetur adipisicing elit. Sunt ut aperiam, ipsum voluptas quidem fugit ipsam, provident molestias tempora debitis unde omnis consequuntur placeat voluptate quod optio eligendi nobis nesciunt.</span>
+                <div class="flex-center gap-10 clr-white bolder">
+                    <input type="text" class="code-inputer" maxlength="1"> -
+                    <input type="text" class="code-inputer" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-inputer" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-inputer" maxlength="1" inputmode="numeric"> |
+                    <i class="fas fa-search grid-center white fz-14 pointer clr-default" id="code-submit-button"></i>
+                </div>
+                    <div class="loader-bar dis-none" id="code-search-bar">
+                    <div class="load-bar bar-1"></div>
+                    <div class="load-bar bar-2"></div>
+                    <div class="load-bar bar-3"></div>
+                    <div class="load-bar bar-4"></div>
+                    <div class="load-bar bar-5"></div>
+                    <div class="load-bar bar-6"></div>
+                </div>
+                <div class="search-load w-100 flex-center mt-1 gap-5 fz-10 clr-grey">
+                    <div class="search-searching clr-white  dis-none" id="code-search-ping">
+                        <i class="fas fa-triangle-exclamation"></i> 
+                        <span class="search-text ping-text"></span>
+                    </div>
+                    <div class="search-searching clr-red dis-none" id="code-search-failed">
+                        <i class="fas fa-triangle-exclamation"></i> 
+                        <span class="search-text">Data tidak ditemukan. Cek kembali!</span>
+                    </div>
+                    <div class="search-searching clr-green dis-none" id="code-search-success">
+                        <i class="fas fa-circle-check"></i> 
+                        <span class="search-text"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content dis-none pt-5 relative scroll" id="data">
+            <div class="driver-basic p-10 clr-white">
+                <div class="driver-img">
+                    <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
+                </div>
+                <div class="confirm-group p-10 ph-20 flex-center m-0" id="foto" data-value="" data-type="Foto Driver">
+                    <div class="cnf-box sx" data-target="foto">
+                        <i class="fas fa-check"></i>
+                        <span>Sesuai</span>
+                    </div>
+                    <div class="cnf-box tx" data-target="foto">
+                        <i class="fas fa-x"></i>
+                        <span>Tidak</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form pv-5 mt-1 clr-white">
+                <div class="form-group">
+                    <div class="group-head">
+                        <span>Nama Driver</span>
+                        <span id="name-output">Bendhard Sabandar</span>
+                    </div>
+                    <div class="confirm-group" id="nama" data-value="" data-type="Nama Driver">
+                        <div class="cnf-box sx" data-target="nama">
+                            <i class="fas fa-check"></i>
+                            <span>Sesuai</span>
+                        </div>
+                        <div class="cnf-box tx" data-target="nama">
+                            <i class="fas fa-x"></i>
+                            <span>Tidak</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="group-head">
+                        <span>No. Polisi</span>
+                        <span id="nopol-output">DE 3828 AM</span>
+                    </div>
+                    <div class="confirm-group" id="nopol" data-value="" data-type="No. Polisi">
+                        <div class="cnf-box sx" data-target="nopol">
+                            <i class="fas fa-check"></i>
+                            <span>Sesuai</span>
+                        </div>
+                        <div class="cnf-box tx" data-target="nopol">
+                            <i class="fas fa-x"></i>
+                            <span>Tidak</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="group-head">
+                        <span>No. Lambung</span>
+                        <span id="nolambung-output">A 00389</span>
+                    </div>
+                    <div class="confirm-group" id="nolambung" data-value="" data-type="No. Lambung">
+                        <div class="cnf-box sx" data-target="nolambung">
+                            <i class="fas fa-check"></i>
+                            <span>Sesuai</span>
+                        </div>
+                        <div class="cnf-box tx" data-target="nolambung">
+                            <i class="fas fa-x"></i>
+                            <span>Tidak</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="group-head">
+                        <span>Type Kendaraan</span>
+                        <span  id="kendaraan-output">Pick-up L300</span>
+                    </div>
+                    <div class="confirm-group" id="kendaraan" data-value=""  data-type="Tipe Kendaraan">
+                        <div class="cnf-box sx" data-target="kendaraan">
+                            <i class="fas fa-check"></i>
+                            <span>Sesuai</span>
+                        </div>
+                        <div class="cnf-box tx" data-target="kendaraan">
+                            <i class="fas fa-x"></i>
+                            <span>Tidak</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="submit p-10">
+                <span class="dis-block fz-10 align-center" id="lanjutkan-text">Jika sudah semua data sudah dipilih, silahkan pilih lanjutkan.</span>
+                <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
+            </div>
+
+            <div class="data-notif grid-center dis-none">
+
+                <div class="form-liter relative white p-5 borad-10 pb-2  dis-none"  id="form-liter">
+                    <i class="fas fa-x grid-center pointer" id="liter-close"></i>
+                    <h3 class="align-center green uppercase p-20 m-0">jumlah liter</h3>
+                    <div class="relative br-green mt-2" id="liter-box"> 
+                        <input type="text" id="liter"/>
+                        <label class="capitalize">Liter</label>
+                    </div>
+                    <span class="liter-error fz-10 w-100 mt-1 dis-block align-center" id="liter-error">Masukan jumlah liter.</span>
+                    <div class="submit green p-10 w-50 m-auto align-center borad-5 pointer mt-1 bolder uppercase" id="submit"><i class="fas fa-save br-none"></i> Submit</div>
+                </div>
+
+                <div class="form-liter relative white p-10 borad-10  dis-none" id="success">
+                    <h2 class="align-center pb-2 clr-green uppercase br-green"><i class="fas fa-check m-0 p-0 br-none fz-25"></i>  Sukses</h2>
+                    <span class="fz-16 mb-2 w-100 dis-block align-center">Data dengan ID X-212 berhasil disimpan</span>
+                    <div class="flex-center gap-10">
+                        <div class="grey p-10 bolder uppercase align-center w-50 m-auto borad-5 pointer scan-lagi to-content-btn" data-target="#scan"><i class="fas fa-qrcode br-none"></i> &nbsp; Scan</div>
+                        <div class="grey p-10 bolder uppercase align-center w-50 m-auto borad-5 pointer code-lagi to-content-btn" data-target="#code"><i class="fas fa-code br-none"></i> &nbsp; Code</div>
+                    </div>
+                </div>
+
+                <div class="form-liter relative white p-10 borad-10  dis-none" id="failed">
+                    <h2 class="align-center pb-2 clr-red uppercase br-red"><i class="fas fa-triangle-exclamation m-0 p-0 br-none fz-25"></i> &nbsp;Gagal</h2>
+                    <span class="fz-16 dis-block align-center mb-2">Data gagal disimpan</span>
+                    <div class="flex-center gap-10 bolder">
+                        <div class="p-10 red w-50 align-center borad-5 pointer" id="resent"><i class="fas fa-rotate-right br-none"></i> Kirim Ulang</div>
+                        <div class="p-10 yellow w-50 align-center borad-5 pointer dis-none" id="to-report"><i class="fas fa-triangle-exclamation br-none"></i> Report</div>
+                    </div>
+                </div>
+
+                <div class="form-liter relative white p-10 borad-10 dis-none" id="form-report">
+                    <h2 class="align-center pb-2 clr-red uppercase br-red"><i class="fas fa-triangle-exclamation m-0 p-0 br-none fz-25"></i> &nbsp;Report</h2>
+                    <textarea id="report-input" class="p-10 w-100"></textarea>
+                    <span class="fz-16 dis-block align-center mt-1 mb-2" id="report-error">Masukan keterangan.</span>
+                    <div class="w-50 m-auto p-10 yellow align-center bolder borad-5 pointer" id="report">Report</div>
+                </div>
+
+                <div class="form-liter relative white p-10 borad-10 dis-none" id="report-done">
+                    <h2 class="align-center pb-2 clr-blue uppercase br-blue"><i class="fas fa-triangle-exclamation m-0 p-0 br-none fz-25"></i> &nbsp;Report sukses</h2>
+                    <span class=" fz-16 dis-block align-center mb-2"></span>
+                    <div class="flex-center gap-10">
+                        <div class="grey p-10 bolder uppercase align-center w-50 m-auto borad-5 pointer scan-lagi to-content-btn" data-target="#scan"><i class="fas fa-qrcode br-none"></i> &nbsp; Scan</div>
+                        <div class="grey p-10 bolder uppercase align-center w-50 m-auto borad-5 pointer code-lagi to-content-btn" data-target="#code"><i class="fas fa-code br-none"></i> &nbsp; Code</div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <div class="content dis-none" id="loader">
+            <div class="loaderx grid-center">
+                <div class="loader-content relative clr-default">
+                    <div class="loader"></div>
+                    <div class="align-center fz-8 ping-text p-3"></div>
+                    <div class="align-center loader-text"></div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Baru setelah itu file JS kamu -->
+    <script src="/js/scanner.js"></script>
+    <script src="/js/class.js"></script>
+    <script>
+        new MainController().init()
+        document.querySelector(".hamburger")
+            .addEventListener("click", function() {
+                this.classList.toggle("is-active");
+        });
+    </script>
+</body>
+</html>
