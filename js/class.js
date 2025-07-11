@@ -3,7 +3,7 @@
 class MainController {
     constructor () {
         this.state          = ""
-        this.apiURL         = "https://script.google.com/macros/s/AKfycbwyG5T13LatnlP7fHb1H1-pE2F-8PYPEl7flEUZOJ4SN0jZnK5YYcovsEDP0Rqrp_XNKg/exec";
+        this.apiURL         = "https://script.google.com/macros/s/AKfycbx1WvkysCUusrEQBXIItYKEw6niynh13JFQbopHNOpZWkFV9eO0JSLkL7W4guTALOHDFg/exec";
         this.proxyURL       = "https://bbmctrl.dlhpambon2025.workers.dev?url=" + encodeURIComponent(this.apiURL);
         this.qrScanner      = new QRScanner(this);
         this.codeHandler    = new CodeHandler(this);
