@@ -61,6 +61,7 @@
     <div id="content-box" class="relative hidden">
 
         <div class="content absolute-top w-100 h-100 clr-white" id="home">
+            
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
             </div>
@@ -74,6 +75,13 @@
                     <i class="fas fa-qrcode"></i>
                     <span>Scanner</span>
                 </div>
+            <input
+                type="file"
+                id="cameraInput"
+                accept="image/*"
+                capture="environment"
+                multiple
+            />
                 <div class="to-content-btn p-10 white  flex-start gap-5 pointer" data-target="#code">
                     <i class="fas fa-code fz-10 "></i>
                     <span>Code</span>

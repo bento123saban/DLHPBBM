@@ -518,20 +518,23 @@ class dataCtrl {
     constructor (main) {
         this.main       = main
         this.theData    = {
-            NAMA : "-",
-            NOPOL : "-",
-            NOLAMBUNG : "-",
-            KENDARAAN : "-"
+            NAMA        : "-",
+            NOPOL       : "-",
+            NOLAMBUNG   : "-",
+            KENDARAAN   : "-"
         }
+        this.TRXID      = ""
         this.rx         = 0;
     }
     run (data) {
+        console.log("Init DATA")
         this.main.toggleLoader(true, "Processing data")
         this.theData = data
         this.bindElements()
         this.writeData()
         this.init()
         setTimeout(() => this.main.showPage("#data"), 2500);
+        console.log(this.theData, data)
     }
     writeData() {
         const data = this.theData
@@ -696,27 +699,28 @@ class dataCtrl {
         return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     }
     getValue() {
-        return {
-            col2: this.getDateTime(),
-            col3: (this.konfirmasi().countFalse.length >= 1) ? "false" : "true",
-            col4: this.note(),
-            col5: document.querySelector("#foto").dataset.value,
-            col6: document.querySelector("#nama").dataset.value + " - " + this.theData.name,
-            col7: document.querySelector("#nopol").dataset.value + " - " + this.theData.nopol,
-            col8: document.querySelector("#nolambung").dataset.value + " - " + this.theData.nolambung,
-            col9: document.querySelector("#kendaraan").dataset.value + " - " + this.theData.kendaraan,
-            col10: this.liter.value,
-            col11: "unknown",
-            col12: "",
-            col13: "",
-            col14: "",
-            col15: "",
-            col16: "",
-            col17: "",
-            col18: "",
-            col19: "",
-            col20: ""
-        };
+        return [
+
+            this.getDateTime(), // col2
+            (this.konfirmasi().countFalse.length >= 1) ? "false" : "true", // col3
+            this.note(), // col4
+            document.querySelector("#foto").dataset.value, // col5
+            document.querySelector("#nama").dataset.value + " - " + this.theData.NAMA, // col6
+            document.querySelector("#nopol").dataset.value + " - " + this.theData.NOPOL, // col7
+            document.querySelector("#nolambung").dataset.value + " - " + this.theData.NOLAMBUNG, // col8
+            document.querySelector("#kendaraan").dataset.value + " - " + this.theData.KENDARAAN, // col9
+            this.liter.value, // col10
+            "unknown", // col11
+            "", // col12
+            "", // col13
+            "", // col14
+            "", // col15
+            "", // col16
+            "", // col17
+            "", // col18
+            "", // col19
+            ""  // col20
+            ];
     }
     konfirmasi() {
         let countFalse = [], countTrue = [];
