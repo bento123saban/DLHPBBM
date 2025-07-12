@@ -1,0 +1,9 @@
+Note :
+
+1. Perlu foto atau tidak saat verifikasi ?
+2. Jika tidak sesuai bagaimana ?
+3. Apa perlu masukan data jika tidak sesuai ?
+4. Berapa foto yang diperlukan ?
+5. Bagaimana jika sebelumnya salah isi data trus mau isi lagi. Jadinya double dalam waktu dekat
+6. Bagaimana jika device tak support
+7. 

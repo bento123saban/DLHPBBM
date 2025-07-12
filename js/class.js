@@ -3,7 +3,7 @@
 class MainController {
     constructor () {
         this.state          = ""
-        this.apiURL         = "https://script.google.com/macros/s/AKfycbyhpPxQ5jz6S4TJUOwwTPRfXBIyd61PAwqo5RUSUtMKQJOC3WKtMl0xCz5MgbhQ7o8G/exec";
+        this.apiURL         = "https://script.google.com/macros/s/AKfycbxi8iJiQCF5kWfrYHCZrSrajfUh6M2kVnWdEFQVrosY7eFkuOpLBUpMr66KfjNBr_rFcg/exec";
         this.proxyURL       = "https://bbmctrl.dlhpambon2025.workers.dev?url=" + encodeURIComponent(this.apiURL);
         this.qrScanner      = new QRScanner(this);
         this.codeHandler    = new CodeHandler(this);
@@ -33,22 +33,84 @@ class MainController {
         }, 1000);
     }
     async post(data) {
+        const timeoutMs = 10000;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
         try {
             const response = await fetch(this.proxyURL, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data),
+                signal: controller.signal
             });
-            return await response.json();
+
+            clearTimeout(timeout);
+
+            // ⛔ Error status HTTP (404, 500, dll)
+            if (!response.ok) {
+                let errMsg = `HTTP Error ${response.status}`;
+                try {
+                    const text = await response.text();
+                    if (text && text.length < 1000) errMsg += `: ${text}`;
+                } catch (e) {
+                    errMsg += ` (gagal baca pesan error: ${e.message})`;
+                }
+                return {
+                    confirm: false,
+                    status: "http-error",
+                    msg: errMsg
+                };
+            }
+
+            // ⚠️ Respon kosong
+            const contentLength = response.headers.get("content-length");
+            if (contentLength === "0" || !response.body) return {
+                confirm: false,
+                status: "empty-response",
+                msg: "Server mengirim respon kosong."
+            };
+            
+            // 🧩 Coba parse JSON
+            let json;
+            try {json = await response.json()}
+            catch (e) {
+                return {
+                    confirm: false,
+                    status: "json-parse-error",
+                    msg: "Respon server bukan JSON valid. " + e.message
+                };
+            }
+
+            // ❌ Struktur JSON tidak sesuai
+            if (!json || typeof json !== "object") return {
+                confirm: false,
+                status: "invalid-json",
+                msg: "Respon server bukan objek JSON yang valid."
+            };
+            // ✅ Berhasil
+            return json;
+
         } catch (e) {
-            console.error("Fetch Error:", e);
+            clearTimeout(timeout);
+            // ⌛ Timeout
+            if (e.name === "AbortError") return {
+                confirm: false,
+                status: "timeout",
+                msg: `Request timeout setelah ${timeoutMs / 1000} detik.`
+            };
+
+            // 🌐 Fetch error (offline, DNS, SSL, CORS, dll)
             return {
-                confirm : false,
-                status : "error",
-                msg     : "Fetch Error: " + e
+                confirm: false,
+                status: "network-error",
+                msg: "Gagal menghubungi server: " + e.message
             };
         }
     }
+
     toggleLoader(show, text = "") {
         const loaderBox     = document.querySelector("#loader");
         const loaderText    = document.querySelector(".loader-text");
@@ -538,7 +600,8 @@ class dataCtrl {
     }
     writeData() {
         const data = this.theData
-        //console.log("datax : " + JSON.stringify(data))
+        this.TRXID = Date.now()
+        console.log(this.TRXID)
         this.nameOutput.textContent     = data.NAMA
         this.nopolOutput.textContent    = data.NOPOL
         this.nolamOutput.textContent    = data.NOLAMBUNG
@@ -700,7 +763,7 @@ class dataCtrl {
     }
     getValue() {
         return [
-
+            this.TRXID,
             this.getDateTime(), // col2
             (this.konfirmasi().countFalse.length >= 1) ? "false" : "true", // col3
             this.note(), // col4
@@ -750,50 +813,77 @@ class dataCtrl {
         console.log(json)
         if (!json) return this.afterRespon("#failed", "Request undefined")
         if(!json.confirm) return this.afterRespon("#failed", json.msg);
-        else return this.afterRespon("#success");
+        else return this.afterRespon("#success", json.msg);
     }
     clearFormData() {
-        this.liter.value = ""
-        this.toReport.classList.add("dis-none")
-        this.formGroups.forEach(group => {
-            group.dataset.value = ""
+        if (this.liter) this.liter.value = "";
+        this.toReport?.classList.add("dis-none");
+        this.notif?.classList.add("dis-none");
+        document.querySelectorAll(".form-liter").forEach(form => form.classList.add("dis-none"));
+        this.formGroups?.forEach(group => {
+            group.dataset.value = "";
             group.classList.remove("highlight");
-            group.querySelectorAll("i, .sx, .tx").forEach(x => x.classList.remove("active", "inactive", "clr-green", "br-green", "clr-blue", "br-blue", "clr-red", "br-red", "clr-orange", "br-orange"))
-            this.lanjutkan.classList.add("cancel")
-            this.lanjutkanText.classList.remove("dis-none")
-            this.notif.classList.add("dis-none")
-            document.querySelectorAll(".form-liter").forEach(form => form.classList.add("dis-none"))
+            group.querySelectorAll("i, .sx, .tx").forEach(el => {
+            el.classList.remove(
+                "active", "inactive",
+                "clr-green", "br-green",
+                "clr-blue", "br-blue",
+                "clr-red", "br-red",
+                "clr-orange", "br-orange"
+            );
+            });
         });
-
+        this.lanjutkan?.classList.add("cancel");
+        this.lanjutkanText?.classList.remove("dis-none");
     }
+
     afterRespon(selector, text = "") {
         const elm   = document.querySelector(selector),
-            span    = elm.querySelector("span")
-        console.log(span)
+            span    = elm.querySelector("span");
         span.textContent = (text.length >= 1) ? text : span.textContent
         elm.classList.remove("dis-none");
         this.main.toggleLoader(false)
-        if(selector == "#success" || selector == "#report-done") {
-            this.formReport.classList.add("dis-none")
-            const spanText = (selector == "#success") ? "Data dengan ID " + this.theData.NOLAMBUNG.toUpperCase() + " berhasil disimpan" : "Terima kasih untuk feedbacknya. <br> Report anda akan segera kami proses.";
-            elm.querySelector("span").innerHTML = spanText
-            let counter     = 9,
-                scanLagi    = elm.querySelector(".scan-lagi"),
-                codeLagi    = elm.querySelector(".code-lagi"),
-                elx         = (this.main.state == "Scan") ? scanLagi : (this.main.state == "Code") ? codeLagi : scanLagi
-            elx.innerHTML = `<i class="fas fa-${(this.main.state == "Scan") ? "qr" : ""}code br-none"></i> &nbsp; ${this.main.state} (${counter + 1})`
-            elx.classList.remove("grey")
-            elx.classList.add("green")
-            const itv = setInterval(() => {
-                elx.innerHTML = `<i class="fas fa-${(this.main.state == "Scan") ? "qr" : ""}code br-none"></i> &nbsp; ${this.main.state} (${counter})`
-                counter--
-                if(counter > 0) return 
-                this.clearFormData()
-                clearInterval(itv)
-                elx.click()
-            }, 1000)
-            scanLagi.addEventListener("click", () => clearInterval(itv))
-            codeLagi.addEventListener("click", () => clearInterval(itv))
+        if (selector === "#success" || selector === "#report-done") {
+            this.formReport.classList.add("dis-none");
+
+            // Teks notifikasi
+            const spanText = (selector === "#success")
+                ? `Data dengan ID <b>${this.theData.NOLAMBUNG.toUpperCase()}</b> berhasil disimpan`
+                : "Terima kasih untuk feedbacknya. <br> Report anda akan segera kami proses.";
+            elm.querySelector("span").innerHTML = spanText;
+
+            // Setup tombol ulang
+            const scanLagi = elm.querySelector(".scan-lagi");
+            const codeLagi = elm.querySelector(".code-lagi");
+            const elx = (this.main.state === "Scan") ? scanLagi :
+                        (this.main.state === "Code") ? codeLagi : scanLagi;
+
+            let counter = 9;
+            const icon = (this.main.state === "Scan") ? "qr" : "";
+            elx.innerHTML = `<i class="fas fa-${icon}code br-none"></i> &nbsp; ${this.main.state} (${counter + 1})`;
+            elx.classList.remove("grey");
+            elx.classList.add("green");
+
+            // Auto countdown + click
+            let itv = setInterval(() => {
+                elx.innerHTML = `<i class="fas fa-${icon}code br-none"></i> &nbsp; ${this.main.state} (${counter})`;
+                if (--counter < 0) {
+                    clearInterval(itv);
+                    this.clearFormData();
+                    elx.click();
+                }
+            }, 1000);
+
+            // Biar aman dari click berkali-kali
+            const stopCountdown = () => {
+                clearInterval(itv);
+                this.clearFormData();
+                scanLagi.removeEventListener("click", stopCountdown);
+                codeLagi.removeEventListener("click", stopCountdown);
+            };
+
+            scanLagi.addEventListener("click", stopCountdown);
+            codeLagi.addEventListener("click", stopCountdown);
         }
     }
 }
