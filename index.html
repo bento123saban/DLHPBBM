@@ -60,7 +60,7 @@
 
     <div id="content-box" class="relative hidden">
 
-        <div class="content absolute-top w-100 h-100 clr-white" id="home">
+        <div class="content absolute-top w-100 h-100 clr-white dis-none" id="home">
             
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
@@ -75,13 +75,6 @@
                     <i class="fas fa-qrcode"></i>
                     <span>Scanner</span>
                 </div>
-            <input
-                type="file"
-                id="cameraInput"
-                accept="image/*"
-                capture="environment"
-                multiple
-            />
                 <div class="to-content-btn p-10 white  flex-start gap-5 pointer" data-target="#code">
                     <i class="fas fa-code fz-10 "></i>
                     <span>Code</span>
@@ -160,7 +153,7 @@
             </div>
         </div>
 
-        <div class="content dis-none pt-5 relative scroll" id="data">
+        <div class="content pt-5 relative scroll" id="data">
             <div class="driver-basic p-10 clr-white">
                 <div class="driver-img">
                     <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
@@ -247,6 +240,12 @@
                 <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
             </div>
 
+            <div id="data-images" class="red w-100 h-100 fixed-top-left  grid-center">
+                <div class="img-cam green p-15 borad-10">
+                    
+                </div>
+            </div>
+
             <div class="data-notif grid-center dis-none">
 
                 <div class="form-liter relative white p-5 borad-10 pb-2  dis-none"  id="form-liter">
@@ -314,7 +313,7 @@
     <script src="/js/scanner.js"></script>
     <script src="/js/class.js"></script>
     <script>
-        new MainController().init()
+        //new MainController().init()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");
