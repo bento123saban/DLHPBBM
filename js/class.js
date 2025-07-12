@@ -1000,3 +1000,193 @@ console.log(btoa(JSON.stringify({
     const json = JSON.stringify(result, null, 2);
     console.log(json);
 })();
+
+
+class ImageCaptureManager {
+  constructor() {
+    // DOM elements
+    this.video      = document.getElementById("video");
+    this.captureBtn = document.getElementById("img-capture");
+    this.countBtn   = document.getElementById("img-count");
+    this.switchBtn  = document.getElementById("img-cams");
+    this.preview    = document.getElementById("the-preview");
+    this.previewBox = document.getElementById("img-preview-box");
+    this.slideBox   = document.getElementById("img-preview-slide");
+    this.clearBtn   = document.getElementById("clear-all");
+    this.uploadBtn  = document.getElementById("upload-all");
+    this.msgEl      = document.getElementById("img-cam-msg");
+    this.prevClose  = document.getElementById("preview-close");
+
+    // Image data
+    this.maxImages = 5;
+    this.images = [];
+
+    // Camera devices
+    this.devices = [];
+    this.currentDeviceIndex = 0;
+    this.stream = null;
+
+    this._init();
+  }
+
+  async _init() {
+    console.log("Start Camera")
+    try {
+      this.devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter(device => device.kind === "videoinput");
+
+      if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan.");
+
+      await this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+
+      this.captureBtn.addEventListener("click", () => this._captureImage());
+      this.switchBtn.addEventListener("click", () => this._switchCamera());
+      this.countBtn.addEventListener("click", () => this._handleCountBtn());
+      this.clearBtn.addEventListener("click", () => this.clearAll());
+      this.prevClose.addEventListener("click", () => this._previeWClose());
+      this.uploadBtn.addEventListener("click", () => this._handleUpload());
+
+    } catch (err) {
+      this._showMessage("Kamera tidak tersedia");
+      console.error(err);
+    }
+  }
+
+  async _startCamera(deviceId) {
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+    }
+
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: deviceId } },
+      audio: false,
+    });
+
+    this.video.srcObject = this.stream;
+  }
+
+  _captureImage() {
+    console.log("caps")
+    if (this.images.length >= this.maxImages) {
+      this._showMessage(`Maksimal ${this.maxImages} gambar`);
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = this.video.videoWidth;
+    canvas.height = this.video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(this.video, 0, 0);
+
+    const imgData = canvas.toDataURL("image/webp");
+    this.images.push(imgData);
+
+    console.log(this.images)
+
+    this._updatePreview();
+    this._updateCountBadge();
+  }
+
+  _updatePreview() {
+    if (!this.images.length) {
+      this.previewBox.classList.add("dis-none");
+      this.slideBox.innerHTML = "";
+      return;
+    }
+
+    // Tampilkan gambar utama
+    //this.preview.src = this.images[this.images.length - 1];
+    //this.previewBox.classList.remove("dis-none");
+
+    // Refresh thumbnail
+    this.slideBox.innerHTML = "";
+    this.images.forEach((src, i) => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.className = "slide-img";
+      img.alt = `Gambar ${i+1}`;
+
+      const delBtn = document.createElement("button");
+      delBtn.innerHTML = "❌";
+      delBtn.className = "delete-btn";
+      delBtn.onclick = () => {
+        this.images.splice(i, 1);
+        this._updatePreview();
+        this._updateCountBadge();
+      };
+
+      const box = document.createElement("div");
+      box.className = "slide-box relative";
+      box.appendChild(img);
+      box.appendChild(delBtn);
+      this.slideBox.appendChild(box);
+    });
+  }
+
+  _previeWClose() {
+    this._startCamera()
+    this.previewBox.classList.add("dis-none")
+  }
+  _updateCountBadge() {
+    this.countBtn.dataset.count = this.images.length || ""
+  }
+
+  async _switchCamera() {
+    if (this.devices.length < 2) {
+      this._showMessage("Hanya 1 kamera tersedia");
+      return;
+    }
+
+    this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
+    await this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+  }
+
+  _handleCountBtn() {
+    if (!this.images.length) {
+      this._showMessage("Belum ada gambar");
+      return;
+    }
+
+    
+
+    this.preview.src = this.images[this.images.length - 1];
+    this.previewBox.classList.remove("dis-none");
+  }
+
+  _showMessage(text, duration = 2000) {
+    this.msgEl.textContent = text;
+    this.msgEl.classList.remove("dis-none");
+
+    clearTimeout(this._msgTimeout);
+    this._msgTimeout = setTimeout(() => {
+      this.msgEl.classList.add("dis-none");
+    }, duration);
+  }
+
+  _handleUpload() {
+    if (!this.images.length) {
+      this._showMessage("Tidak ada gambar untuk diupload");
+      return;
+    }
+
+    this._showMessage("Upload belum diimplementasi");
+    // Implementasikan upload ke Apps Script atau API lain di sini
+  }
+
+  getCapturedImages() {
+    return this.images;
+  }
+
+  clearAll() {
+    this.images = [];
+    this._updatePreview();
+    this._updateCountBadge();
+    this._showMessage("Semua gambar dihapus");
+  }
+}
+
+// Init saat halaman selesai dimuat
+window.addEventListener("DOMContentLoaded", () => {
+  window.imageManager = new ImageCaptureManager();
+});

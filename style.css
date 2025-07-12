@@ -595,7 +595,7 @@ nav {
     height: 100%;
     width: 100%;
 }
-video {
+#reader video {
     position: absolute;
     top: 0;
     left: 0;
@@ -1062,4 +1062,87 @@ textarea {
   100% { 
     transform: translate3d(85px,0,0);
   }
+}
+
+
+#data-images {
+    background: linear-gradient(45deg, white, transparent);
+    backdrop-filter: blur(3px);
+}
+.img-cam {
+    position: relative;
+    width: clamp(250px, 100%, 500px);
+    height: clamp(250px, calc(100% - 80px), 500px);
+    border: 2px solid white !important;
+}
+.img-cam-btn {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+.img-cam-btn button {
+    width: 60px;
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 10000px;
+    background: transparent;
+    color: white;
+    font-size: 25px;
+    position: relative;
+}
+.img-count::after {
+    content: attr(data-count);
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: white;
+    font-size: 12px;
+}
+
+#img-capture {
+    background: white;
+    outline: 2px solid white;
+    outline-offset: 5px;
+    color: darkcyan;
+}
+#video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+.img-preview-box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(45deg, white, transparent);
+    backdrop-filter: blur(2px);
+}
+#img-preview {
+    width: 100%;
+}
+.img-preview-slide {
+    overflow: hidden;
+}
+.slide-box {
+    width: 20%;
+    aspect-ratio: 1;
+    position: relative;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.slide-box img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }

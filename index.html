@@ -240,11 +240,38 @@
                 <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
             </div>
 
-            <div id="data-images" class="red w-100 h-100 fixed-top-left  grid-center">
-                <div class="img-cam green p-15 borad-10">
-                    
+            <div id="data-images" class="w-100 h-100 p-20 fixed-top-left grid-center">
+                <div class="img-cam p-15 borad-10 relative hidden" id="img-cam">
+                
+                    <!-- Video Kamera -->
+                    <video id="video" autoplay playsinline></video>
+
+                    <!-- Tombol Kontrol -->
+                    <div class="img-cam-btn flex-evenly w-100 p-15">
+                        <button id="img-cams"><i class="fas fa-camera-rotate"></i></button>
+                        <button id="img-capture"><i class="fas fa-images"></i></button>
+                        <button id="img-count" data-count="1">
+                            <i class="fas fa-image"></i>
+                        </button>
+                    </div>
+
+                    <div class="img-preview-box dis-none" id="img-preview-box">
+                        <div id="img-preview" class="hidden relative p-10 h-100">
+                            <div class="slide-box w-100 h-100">
+                                <img id="the-preview" src="" alt="slide-img" class="slide-img">
+                            </div>
+                        </div>
+                        <div id="img-preview-slide" class="img-preview-slide flex-center gap-10 w-100 p-10 pb-2"></div>
+                        <div id="preview-btn" class="flex-evenly gap-10 p-10">
+                            <button id="clear-all" class="yellow p-10 w-50 borad-5"><i class="fas fa-trash"></i> Clear All</button>
+                            <button id="upload-all" class="green p-10 w-50 borad-5"><i class="fas fa-upload"></i> Upload</button>
+                            <button id="preview-close" class="default pv-10 br-none ph-20 w-50 borad-5"><i class="fas fa-upload"></i> Back</button>
+                        </div>
+                    </div>
                 </div>
+                <span id="img-cam-msg" class="img-cam-msg absolute-center dis-block p-10 blue ">Belum ada gambar</span>
             </div>
+
 
             <div class="data-notif grid-center dis-none">
 
