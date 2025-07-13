@@ -1003,69 +1003,95 @@ console.log(btoa(JSON.stringify({
 
 
 class ImageCaptureManager {
-  constructor() {
-    this.video = document.getElementById("video");
-    this.captureBtn = document.getElementById("img-capture");
-    this.countBtn = document.getElementById("img-count");
-    this.switchBtn = document.getElementById("img-cams");
-    this.preview = document.getElementById("the-preview");
-    this.previewBox = document.getElementById("img-preview-box");
-    this.slideBox = document.getElementById("img-preview-slide");
-    this.clearBtn = document.getElementById("clear-all");
-    this.uploadBtn = document.getElementById("upload-all");
-    this.msgEl = document.getElementById("img-cam-msg");
-    this.prevClose = document.getElementById("preview-close");
+    constructor() {
+        this.video      = document.getElementById("video");
+        this.captureBtn = document.getElementById("img-capture");
+        this.countBtn   = document.getElementById("img-count");
+        this.switchBtn  = document.getElementById("img-cams");
+        this.preview    = document.getElementById("the-preview");
+        this.previewBox = document.getElementById("img-preview-box");
+        this.slideBox   = document.getElementById("img-preview-slide");
+        this.clearBtn   = document.getElementById("clear-all");
+        this.uploadBtn  = document.getElementById("upload-all");
+        this.msgEl      = document.getElementById("img-cam-msg");
+        this.prevClose  = document.getElementById("preview-close");
 
-    this.images = [];
-    this.maxImages = 5;
-    this.devices = [];
-    this.currentDeviceIndex = 0;
-    this.stream = null;
+        this.maxImages = 5;
+        this.images = [];
 
-    this._init();
-  }
+        this.devices = [];
+        this.currentDeviceIndex = 0;
+        this.stream = null;
 
-  async _init() {
-    try {
-      this.devices = (await navigator.mediaDevices.enumerateDevices())
-        .filter(device => device.kind === "videoinput");
+        this._init();
+    }
 
-      if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan.");
-      await this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+    async _init() {
+        try {
+            this.devices = (await navigator.mediaDevices.enumerateDevices())
+                .filter(device => device.kind === "videoinput");
 
-      this.captureBtn.addEventListener("click", () => this._captureImage());
-      this.switchBtn.addEventListener("click", () => this._switchCamera());
-      this.countBtn.addEventListener("click", () => this._handleCountBtn());
-      this.clearBtn.addEventListener("click", () => this.clearAll());
-      this.prevClose.addEventListener("click", () => this._previeWClose());
-      this.uploadBtn.addEventListener("click", () => this._handleUpload());
-      document.getElementById("big-preview-close").addEventListener("click", () => {
-        document.getElementById("big-preview").classList.add("dis-none");
-      });
+        if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan.");
 
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          this.stopCamera();
-        } else if (this.previewBox.classList.contains("dis-none")) {
-          this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+            await this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
+
+            this.captureBtn.addEventListener("click", () => this._captureImage());
+            this.switchBtn.addEventListener("click", () => this._switchCamera());
+            this.countBtn.addEventListener("click", () => this._handleCountBtn());
+            this.clearBtn.addEventListener("click", () => this.clearAll());
+            this.prevClose.addEventListener("click", () => this._previeWClose());
+            this.uploadBtn.addEventListener("click", () => this._handleUpload());
+
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) this._stopCamera();
+                else if (this.previewBox.classList.contains("dis-none")) this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
+            });
+        } catch (err) {
+            this._showMessage("Kamera tidak tersedia");
+            console.error(err);
         }
-      });
+    }
+
+  async _startCamera(deviceId) {
+    try {
+      const constraints = deviceId
+        ? { video: { deviceId: { exact: deviceId } }, audio: false }
+        : { video: true, audio: false };
+
+      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.video.srcObject = this.stream;
+
     } catch (err) {
-      this._showMessage("Kamera tidak tersedia");
-      console.error(err);
+        this._stopCamera();
+        console.error("Gagal memulai kamera:", err);
+
+        let message = "Kamera gagal dinyalakan";
+
+        if (err.name === "OverconstrainedError") {
+            message = "Kamera tidak ditemukan. Mencoba fallback...";
+            console.warn("Fallback ke kamera default");
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                this.video.srcObject = this.stream;
+                return;
+            } catch (fallbackErr) {
+                console.error("Fallback gagal:", fallbackErr);
+            }
+        }
+
+        if (err.name === "NotAllowedError") {
+            message = "Akses kamera ditolak. Harap izinkan dari browser.";
+        } else if (err.name === "NotFoundError") {
+            message = "Kamera tidak tersedia di perangkat ini.";
+        } else if (err.name === "NotReadableError") {
+            message = "Kamera sedang dipakai aplikasi lain.";
+        }
+
+        this._showMessage(message);
     }
   }
 
-  async _startCamera(deviceId) {
-    this.stopCamera();
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
-      audio: false,
-    });
-    this.video.srcObject = this.stream;
-  }
-
-  stopCamera() {
+  _stopCamera() {
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
@@ -1074,6 +1100,13 @@ class ImageCaptureManager {
   }
 
   _captureImage() {
+    if(this.images.length >= 1) {
+        this.countBtn.classList.remove("opacity-0")
+        this.countBtn.classList.remove("off")
+    } else {
+        this.countBtn.classList.remove("opacity-0")
+        this.countBtn.classList.remove("off")
+    }
     if (this.images.length >= this.maxImages) {
       this._showMessage(`Maksimal ${this.maxImages} gambar`);
       return;
@@ -1082,26 +1115,15 @@ class ImageCaptureManager {
     const canvas = document.createElement("canvas");
     canvas.width = this.video.videoWidth;
     canvas.height = this.video.videoHeight;
+
     const ctx = canvas.getContext("2d");
     ctx.drawImage(this.video, 0, 0);
-    const imgData = canvas.toDataURL("image/webp");
 
-    navigator.geolocation.getCurrentPosition(
-      async pos => {
-        const { latitude, longitude } = pos.coords;
-        const address = await this._getLocationName(latitude, longitude);
-        this.images.push({ src: imgData, lat: latitude, lng: longitude, address });
-        this._updatePreview();
-        this._updateCountBadge();
-        this._checkBlur(imgData);
-      },
-      err => {
-        this.images.push({ src: imgData, lat: null, lng: null, address: "Lokasi tidak tersedia" });
-        this._updatePreview();
-        this._updateCountBadge();
-        this._checkBlur(imgData);
-      }
-    );
+    const imgData = canvas.toDataURL("image/webp");
+    this.images.push(imgData);
+
+    this._updatePreview();
+    this._updateCountBadge();
   }
 
   _updatePreview() {
@@ -1112,14 +1134,11 @@ class ImageCaptureManager {
     }
 
     this.slideBox.innerHTML = "";
-    this.images.forEach((data, i) => {
-      const { src, lat, lng, address } = data;
-
+    this.images.forEach((src, i) => {
       const img = document.createElement("img");
       img.src = src;
       img.className = "slide-img";
       img.alt = `Gambar ${i+1}`;
-      img.onclick = () => this._openBigPreview(data);
 
       const delBtn = document.createElement("button");
       delBtn.innerHTML = "❌";
@@ -1130,40 +1149,16 @@ class ImageCaptureManager {
         this._updateCountBadge();
       };
 
-      const geo = document.createElement("div");
-      geo.className = "thumb-location";
-      geo.textContent = address || "📍 Lokasi tidak tersedia";
-
       const box = document.createElement("div");
       box.className = "slide-box relative";
       box.appendChild(img);
-      box.appendChild(geo);
       box.appendChild(delBtn);
       this.slideBox.appendChild(box);
     });
   }
 
-  _openBigPreview(data) {
-    const overlay = document.getElementById("big-preview");
-    const img = document.getElementById("big-preview-img");
-    const meta = document.getElementById("big-preview-meta");
-    img.src = data.src;
-    img.style.transform = "scale(1)";
-    overlay.classList.remove("dis-none");
-    const { lat, lng, address } = data;
-    meta.innerHTML = `📍 <b>Lokasi:</b> ${lat && lng ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Tidak tersedia"}<br>
-                     🏷️ <b>Alamat:</b> ${address || "Tidak tersedia"}`;
-
-    let scale = 1;
-    img.onclick = () => {
-      scale = scale === 1 ? 2 : 1;
-      img.style.transform = `scale(${scale})`;
-      img.style.cursor = scale > 1 ? "zoom-out" : "zoom-in";
-    };
-  }
-
   _previeWClose() {
-    this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+    this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
     this.previewBox.classList.add("dis-none");
   }
 
@@ -1171,7 +1166,7 @@ class ImageCaptureManager {
     const count = this.images.length;
     this.countBtn.dataset.count = count || "";
     if (count > 0) {
-      this.countBtn.classList.remove("dis-none");
+      this.countBtn.classList.remove("off, opacity-0");
     } else {
       this.countBtn.classList.add("dis-none");
     }
@@ -1182,23 +1177,29 @@ class ImageCaptureManager {
       this._showMessage("Hanya 1 kamera tersedia");
       return;
     }
+
     this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
-    await this._startCamera(this.devices[this.currentDeviceIndex].deviceId);
+    const nextDeviceId = this.devices[this.currentDeviceIndex]?.deviceId;
+
+    await this._startCamera(nextDeviceId);
   }
 
   _handleCountBtn() {
+    if(this.countBtn.classList.contains("off")) return
     if (!this.images.length) {
       this._showMessage("Belum ada gambar");
       return;
     }
-    this.stopCamera();
-    this.preview.src = this.images[this.images.length - 1].src;
+
+    this._stopCamera();
+    this.preview.src = this.images[this.images.length - 1];
     this.previewBox.classList.remove("dis-none");
   }
 
-  _showMessage(text, duration = 2000) {
+  _showMessage(text, duration = 10000) {
     this.msgEl.textContent = text;
     this.msgEl.classList.remove("dis-none");
+
     clearTimeout(this._msgTimeout);
     this._msgTimeout = setTimeout(() => {
       this.msgEl.classList.add("dis-none");
@@ -1210,62 +1211,26 @@ class ImageCaptureManager {
       this._showMessage("Tidak ada gambar untuk diupload");
       return;
     }
+
     this._showMessage("Upload belum diimplementasi");
   }
 
+  getCapturedImages() {
+    return this.images;
+  }
+
   clearAll() {
+    this.countBtn.classList.add("opacity-0")
+    this.countBtn.classList.add("off")
     this.images = [];
     this._updatePreview();
     this._updateCountBadge();
     this._showMessage("Semua gambar dihapus");
   }
-
-  async _getLocationName(lat, lng) {
-    const apiKey = "YOUR_GOOGLE_MAPS_API_KEY";
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
-    try {
-      const res = await fetch(url);
-      const json = await res.json();
-      return json.results[0]?.formatted_address || "Lokasi tidak dikenal";
-    } catch (err) {
-      console.warn("Gagal ambil nama lokasi:", err);
-      return "Gagal reverse geocode";
-    }
-  }
-
-  _checkBlur(src) {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const gray = [];
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const r = imageData.data[i];
-        const g = imageData.data[i + 1];
-        const b = imageData.data[i + 2];
-        gray.push(0.2989 * r + 0.587 * g + 0.114 * b);
-      }
-
-      let sum = 0, mean, variance = 0;
-      gray.forEach(v => sum += v);
-      mean = sum / gray.length;
-      gray.forEach(v => variance += Math.pow(v - mean, 2));
-      const laplacianVariance = variance / gray.length;
-
-      if (laplacianVariance < 80) {
-        this._showMessage("Gambar terdeteksi blur");
-      }
-    };
-    img.src = src;
-  }
 }
 
-// Init saat halaman selesai dimuat
 window.addEventListener("DOMContentLoaded", () => {
   window.imageManager = new ImageCaptureManager();
 });
+
+
