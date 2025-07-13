@@ -486,7 +486,29 @@ nav {
     height: 100%;
     width: 100%;
     padding: 25px !important;
-}/* gradasi cahaya yang bergerak */
+}
+#focus-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  transform: translate(-50%, -50%);
+  border: 2px dashed #0f0;
+  border-radius: 16px;
+  box-shadow: 0 0 8px #0f0;
+  animation: pulse 2s infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 5px #0f0; }
+  50% { box-shadow: 0 0 15px #0f0; }
+  100% { box-shadow: 0 0 5px #0f0; }
+}
+
+
+/* gradasi cahaya yang bergerak */
 .skeleton-box {
     height: 100px;
     width: 60%;
@@ -527,11 +549,16 @@ nav {
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 20px 0;
 }
-#cam-buttons button {
-    text-align: center;
-    width: 60px !important;
+#switch-camera {
+    background: transparent;
+    border: none !important;
+    font-size: 30px;
+    color: white;
+    position: absolute;
+    bottom: 60px;
+    left: 20%;
+    transform: translate(-50%, 50%);
 }
 #toggle-btn {
     width: 60px;
@@ -541,34 +568,34 @@ nav {
     border-radius: 1000px;
     border: none;
     background: #ddd;
-    transform: translateY();
-    position: relative;
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translate(-50%, 50%);
 }
 #code-input-btn {
     background: transparent;
     border: none !important;
     font-size: 30px;
     color: white;
-}
-#switch-camera {
-    background: transparent;
-    border: none !important;
-    font-size: 30px;
-    color: white;
-    position: relative;
-}
-#switch-camera.off::after, #code-input-btn.off::after, #toggle-btn.off::after {
-    content: "";
     position: absolute;
-    width: 150%;
-    height: 150%;
-    border-radius: 1000px;
-    z-index: 1000;
-    backdrop-filter: blur(3px);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    bottom: 60px;
+    right: 20%;
+    transform: translate(50%, 50%);
 }
+
+#code-input-btn.center {
+    right: 50% !important;
+    width: 60px;
+    background: white;
+    color: darkcyan;
+    border-radius: 10000%;
+    aspect-ratio: 1;
+    outline: 2px solid white;
+    outline-offset: 6px;
+    font-size: 20px;
+}
+
 #container h4 {
     position: absolute;
     top: 10px;

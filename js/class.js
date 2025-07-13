@@ -1,37 +1,41 @@
-"use-strict";
+"use strict";
 
 class MainController {
-    constructor () {
-        this.state          = ""
-        this.apiURL         = "https://script.google.com/macros/s/AKfycbxi8iJiQCF5kWfrYHCZrSrajfUh6M2kVnWdEFQVrosY7eFkuOpLBUpMr66KfjNBr_rFcg/exec";
-        this.proxyURL       = "https://bbmctrl.dlhpambon2025.workers.dev?url=" + encodeURIComponent(this.apiURL);
-        this.qrScanner      = new QRScanner(this);
-        this.codeHandler    = new CodeHandler(this);
-        this.dataCtrl       = new dataCtrl(this);
+    constructor() {
+        this.state = "";
+        this.apiURL = "https://script.google.com/macros/s/AKfycbxi8iJiQCF5kWfrYHCZrSrajfUh6M2kVnWdEFQVrosY7eFkuOpLBUpMr66KfjNBr_rFcg/exec";
+        this.proxyURL = `https://bbmctrl.dlhpambon2025.workers.dev?url=${encodeURIComponent(this.apiURL)}`;
+        this.qrScanner = new QRScanner(this);
+        this.codeHandler = new CodeHandler(this);
+        this.dataCtrl = new dataCtrl(this);
+        this.pingTimer = null;
     }
-    async init() {
+
+    init() {
         window.addEventListener("DOMContentLoaded", async () => {
-            await this.start();
-            this.pageNav()
+            //await this.start();
+            this.pageNav();
             this.toggleLoader(false, "Connect to server");
         });
-        const resp = await fetch("https://quickchart.io/qr?text=eyJhdXRoIjoiRExIUCIsImRhdGEiOnsiTkFNQSI6IkJlbmRoYXJkIiwiTk9QT0wiOiJERSAxNjExIFNCIiwiTk9MQU1CVU5HIjoiQi0xNiIsIktFTkRBUkFBTiI6IkxhbWJvcmdpbmhpIn19&caption=Bend16&margin=6"
-        )
     }
+
     async start() {
         this.toggleLoader(true, "Connect to server");
-        setInterval(async () => {
+        // Ping setiap 10 detik, bukan tiap 1 detik
+        this.pingTimer = setInterval(async () => {
             const start = performance.now();
             try {
                 await fetch(this.apiURL, { method: "POST", body: "tesPing" });
                 const latency = Math.round(performance.now() - start);
-                [...document.querySelectorAll('.ping-text')].forEach(ping => ping.textContent = `${latency} ms`)
+                document.querySelectorAll(".ping-text").forEach(ping => ping.textContent = `${latency} ms`);
             } catch {
                 console.warn("Ping failed. Reloading...");
+                clearInterval(this.pingTimer);
                 window.location.reload();
             }
         }, 1000);
     }
+
     async post(data) {
         const timeoutMs = 10000;
         const controller = new AbortController();
@@ -40,16 +44,12 @@ class MainController {
         try {
             const response = await fetch(this.proxyURL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
                 signal: controller.signal
             });
-
             clearTimeout(timeout);
 
-            // ⛔ Error status HTTP (404, 500, dll)
             if (!response.ok) {
                 let errMsg = `HTTP Error ${response.status}`;
                 try {
@@ -58,193 +58,82 @@ class MainController {
                 } catch (e) {
                     errMsg += ` (gagal baca pesan error: ${e.message})`;
                 }
-                return {
-                    confirm: false,
-                    status: "http-error",
-                    msg: errMsg
-                };
+                return { confirm: false, status: "http-error", msg: errMsg };
             }
 
-            // ⚠️ Respon kosong
             const contentLength = response.headers.get("content-length");
-            if (contentLength === "0" || !response.body) return {
-                confirm: false,
-                status: "empty-response",
-                msg: "Server mengirim respon kosong."
-            };
-            
-            // 🧩 Coba parse JSON
-            let json;
-            try {json = await response.json()}
-            catch (e) {
-                return {
-                    confirm: false,
-                    status: "json-parse-error",
-                    msg: "Respon server bukan JSON valid. " + e.message
-                };
+            if (contentLength === "0" || !response.body) {
+                return { confirm: false, status: "empty-response", msg: "Server mengirim respon kosong." };
             }
 
-            // ❌ Struktur JSON tidak sesuai
-            if (!json || typeof json !== "object") return {
-                confirm: false,
-                status: "invalid-json",
-                msg: "Respon server bukan objek JSON yang valid."
-            };
-            // ✅ Berhasil
-            return json;
-
+            try {
+                const json = await response.json();
+                if (!json || typeof json !== "object") throw new Error("Bukan object JSON");
+                return json;
+            } catch (e) {
+                return { confirm: false, status: "json-parse-error", msg: "Respon bukan JSON valid: " + e.message };
+            }
         } catch (e) {
             clearTimeout(timeout);
-            // ⌛ Timeout
-            if (e.name === "AbortError") return {
-                confirm: false,
-                status: "timeout",
-                msg: `Request timeout setelah ${timeoutMs / 1000} detik.`
-            };
-
-            // 🌐 Fetch error (offline, DNS, SSL, CORS, dll)
-            return {
-                confirm: false,
-                status: "network-error",
-                msg: "Gagal menghubungi server: " + e.message
-            };
+            if (e.name === "AbortError") {
+                return { confirm: false, status: "timeout", msg: `Request timeout setelah ${timeoutMs / 1000} detik.` };
+            }
+            return { confirm: false, status: "network-error", msg: "Gagal menghubungi server: " + e.message };
         }
     }
 
     toggleLoader(show, text = "") {
-        const loaderBox     = document.querySelector("#loader");
-        const loaderText    = document.querySelector(".loader-text");
+        const loaderBox = document.querySelector("#loader");
+        const loaderText = document.querySelector(".loader-text");
         loaderText.textContent = text;
         loaderBox.classList.toggle("dis-none", !show);
     }
+
     showPage(elm) {
         document.querySelectorAll(".content").forEach(el => el.classList.add("dis-none"));
         document.querySelector(elm).classList.remove("dis-none");
     }
-    pageNav(){
+
+    pageNav() {
         document.querySelectorAll(".to-content-btn").forEach(btn => {
             btn.addEventListener("click", () => {
-                const target = btn.dataset.target
-                if(target == "#scan") {
-                    this.state = "Scan"
-                    this.toggleLoader(true, "Scanner configure")
-                    this.qrScanner.run()
-                } else if (target == "#code") {
-                    this.state = "Code"
-                    this.toggleLoader(true, "CodeInputer Configure")
-                    this.codeHandler.run()
-                } else if (target == '#home') {
-                    console.log("home")
-                    this.state = ""
-                    this.showPage("#home")
-                    this.toggleLoader(false, "...")
+                if(btn.classList.contains("off")) return
+                const target = btn.dataset.target;
+                if (target === "#scan") {
+                    this.state = "Scan";
+                    this.toggleLoader(true, "Scanner configure");
+                    this.qrScanner.run();
+                } else if (target === "#code") {
+                    this.state = "Code";
+                    this.toggleLoader(true, "CodeInputer Configure");
+                    this.codeHandler.run();
+                } else if (target === "#home") {
+                    this.state = "";
+                    this.showPage("#home");
+                    this.toggleLoader(false, "...");
                 }
-            })
-        })
-    }
-    urlChecker(url) {
-        const params = new URLSearchParams(url);
-        if (!params.has("code")) return false;
-
-        try {
-            const decoded = atob(params.get("data"));
-            const data = JSON.parse(decoded);
-
-            if (data.auth != "DLHP") return false;
-            this.resetScanner()
-            return new dataCtrl().scannerCtrl(data);
-        } catch (e) {
-            return false;
-        }
+            });
+        });
     }
 }
 
-
 class QRScanner {
     constructor(main) {
-        this.main               = main;
-        this.html5QrCode        = new Html5Qrcode("reader");
-        this.cameras            = [];
-        this.currentCamIndex    = 0;
-        this.isScanning         = false;
-        this.isBusy             = false;
-        this.lastPermission     = null;
-        this.seenQRCodes        = new Set();
-        this.overlayCanvas      = document.getElementById("debug-overlay");
-        this.enhanceCanvas      = document.createElement("canvas");
-        this.enhanceCanvas.width    = 300;
-        this.enhanceCanvas.height   = 500;
-        this.isSwitchingCamera      = false;
-        this.isScanning         = false;
-        this.isStopping         = false;
-        this.enhanceCtx         = this.enhanceCanvas.getContext("webgl") || this.enhanceCanvas.getContext("experimental-webgl");
+        this.main = main;
+        this.html5QrCode = new Html5Qrcode("reader");
+        this.cameras = [];
+        this.currentCamIndex = 0;
+        this.isScanning = false;
+        this.isBusy = false;
+        this.lastPermission = null;
+        this.isSwitchingCamera = false;
+        this.isTransitioning = false;
+        this.isStopping = false;
+        this.lastScan = { text: null, time: 0 };
+        this._izinInterval = null;
         this.initGLFX();
     }
-    async initCameras() {
-        try {
-            this.cameras = await Html5Qrcode.getCameras();
-            console.log(`[QRScanner] Kamera ditemukan: ${this.cameras.length}`);
 
-            const switchBtn = document.getElementById("switch-camera");
-            if (switchBtn) {
-                if (this.cameras.length < 2) switchBtn.classList.add("off");
-                else switchBtn.classList.remove("off");
-            }
-        } catch (e) {
-            console.warn("[QRScanner] Gagal inisialisasi kamera:", e);
-        }
-    }
-    async applyEnhanceFilter(result) {
-        try {
-            const video = document.querySelector("video");
-            if (!video || !this.fxCanvas) return true;
-
-            const tmpCanvas = document.createElement("canvas");
-            tmpCanvas.width = video.videoWidth;
-            tmpCanvas.height = video.videoHeight;
-            const ctx = tmpCanvas.getContext("2d");
-            ctx.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
-            const texture = this.fxCanvas.texture(tmpCanvas);
-            this.fxCanvas.draw(texture)
-                .brightnessContrast(0.1, 0.2) // boost brightness & contrast
-                .unsharpMask(20, 2)            // sharpen
-                .update();
-            return true;
-        } catch (e) {
-            console.warn("[Enhancer] Gagal apply filter:", e);
-            return true; // tetap lanjut scan meskipun gagal
-        }
-    }
-    async restartScanner() {
-        if (!this.isScanning || this.isBusy) return;
-        try {
-            await this.html5QrCode.stop();
-            await this.html5QrCode.clear();
-        } catch (e) {
-            console.warn("[QRScanner] Restart gagal stop/clear:", e);
-        }
-        this.html5QrCode = new Html5Qrcode("reader");
-        await this.startScanner();
-    }
-    encodeCheck(base64Str) {
-        try {
-            const decodedStr = atob(base64Str); // Decode Base64
-            const json = JSON.parse(decodedStr); // Parse jadi JSON
-
-            if (json.auth !== "DLHP" || typeof json.data !== "object") throw new Error("Format DLHP tidak valid");
-            return {
-                status: true,
-                message: "QR Valid DLHP",
-                data: json.data,
-                auth: json.auth
-            };
-        } catch (e) {
-            return {
-                status: false,
-                message: "Gagal decode DLHP: " + e.message
-            };
-        }
-    }
     async run() {
         this.main.state = "Scan";
         this.main.showPage("#scan");
@@ -254,8 +143,10 @@ class QRScanner {
         if (!ok) return;
 
         this.bindEvents();
+        await this.startScanner();
 
-        setInterval(async () => {
+        if (this._izinInterval) clearInterval(this._izinInterval);
+        this._izinInterval = setInterval(async () => {
             if (this.main.state !== "Scan") return;
             const izin = await this.cekIzinKamera();
             if (izin.state !== this.lastPermission) {
@@ -264,232 +155,228 @@ class QRScanner {
             }
         }, 1000);
     }
-    async cekIzinKamera() {
-        try {
-            const status = await navigator.permissions.query({ name: 'camera' });
-            switch (status.state) {
-                case 'granted': return { status: true,  state: "granted", msg: "Kamera sudah diizinkan" };
-                case 'prompt':  return { status: false, state: "prompt", msg: "Meminta izin kamera..." };
-                case 'denied':  return { status: false, state: "denied", msg: "Akses kamera ditolak" };
-                default:        return { status: false, state: "unsupport", msg: "Permissions API tidak didukung" };
-            }
-        } catch (err) {
-            console.error('Error cek izin kamera:', err);
-            return { status: false, state: "error", msg: "Gagal cek izin kamera: " + err };
+
+    async stop() {
+        await this.stopScanner();
+        if (this._izinInterval) {
+            clearInterval(this._izinInterval);
+            this._izinInterval = null;
         }
     }
-    async permissions() {
-        const camStatus     = await this.cekKameraTersedia();
-        const izinStatus    = await this.cekIzinKamera();
 
-        const scanHeader    = document.querySelector('#scan h4');
-        const scanText      = document.querySelector('.scan-notif-text');
-        const toggleBtn     = document.querySelector('#toggle-btn');
-        const switchCams    = document.querySelector('#switch-camera');
-        const codeInput     = document.querySelector('#code-input-btn');
-
-        const showErrorUI   = (icon, title, message, status = false) => {
-            scanHeader.innerHTML = `${icon} ${title}`;
-            scanText.innerHTML = message;
-
-            if (status) {
-                scanText.classList.add("dis-none");
-                scanHeader.classList.remove("red");
-                toggleBtn.classList.remove("off");
-                switchCams.classList.remove("off");
-            } else {
-                scanText.classList.remove("dis-none");
-                scanHeader.classList.add("red");
-                toggleBtn.classList.add("off");
-                switchCams.classList.add("off");
-            }
-            codeInput.classList.remove("off");
-        };
-
-        if (!camStatus.status) {
-            return showErrorUI('<i class="fas fa-camera-slash"></i>', camStatus.msg, 'Gunakan perangkat dengan kamera atau input manual.');
-        }
-
-        if (!izinStatus.status) {
-            return showErrorUI('<i class="fas fa-lock"></i>', 'Akses kamera ditolak', 'Ubah izin di pengaturan browser atau gunakan input manual.');
-        }
-
-        scanHeader.innerHTML = "QRCode Scanner";
-        scanHeader.classList.remove("red");
-        scanText.classList.add("dis-none");
-        toggleBtn.classList.remove("off");
-        switchCams.classList.remove("off");
-        codeInput.classList.remove("off");
-
-        return true;
-    }
-    async cekKameraTersedia() {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const kameraAda = devices.some(device => device.kind === 'videoinput');
-            return kameraAda
-                ? { status: true, state: 'detected', msg: 'Kamera terdeteksi.' }
-                : { status: false, state: 'not detected', msg: 'Tidak ada kamera terdeteksi di perangkat ini' };
-        } catch (err) {
-            console.error('[QRScanner] Gagal deteksi kamera:', err);
-            return { status: false, state: "error", msg: 'Gagal mendeteksi kamera: ' + err.message };
-        }
-    }
     async startScanner() {
         const toggleBtn = document.getElementById("toggle-btn");
-        if (this.isScanning || this.isTransitioning || this.isStopping) {
-            console.warn("[QRScanner] Tidak bisa start, sedang transisi atau scanning aktif");
-            return;
-        }
-    
+        if (this.isScanning || this.isTransitioning || this.isStopping) return;
+
         if (this.cameras.length === 0) await this.initCameras();
-        if (this.cameras.length === 0) {
-            console.error("[QRScanner] Tidak ada kamera tersedia");
-            return;
-        }
-    
+        if (this.cameras.length === 0) return;
+
         this.isTransitioning = true;
         this.isScanning = true;
         toggleBtn?.classList.add("active");
-    
-        const startWithConfig = async (config) => {
-            try {
-                await this.html5QrCode.start(
-                    config,
-                    { fps: 60, qrbox: { width: 300, height: 500 } },
-                    async (decodedText, result) => {
-                        this.drawOverlay(result);
-                        document.getElementById("result").innerText = `Hasil: ${decodedText}`;
-                        const checks = await this.encodeCheck(decodedText);
-                        if (!checks.status) return;
-                        await this.main.dataCtrl.run(checks.data);
-                    }
-                );
-                console.log("[QRScanner] Scanner dimulai dengan config:", config);
-                this.isTransitioning = false;
-            } catch (err) {
-                throw err;
+
+        const config = { fps: 60, qrbox: { width: 300, height: 500 } };
+
+        const onScanSuccess = async (decodedText, result) => {
+            const now = Date.now();
+            if (decodedText === this.lastScan.text && now - this.lastScan.time < 5000) {
+                console.log("[QRScanner] Duplikat QR, abaikan.");
+                return;
             }
+            this.lastScan = { text: decodedText, time: now };
+            const checks = await this.encodeCheck(decodedText);
+            if (!checks.status) return;
+            await this.main.dataCtrl.run(checks.data);
         };
-    
+
         try {
-            await startWithConfig({ deviceId: { exact: this.cameras[this.currentCamIndex].id } });
+            await this.html5QrCode.start(
+                { deviceId: { exact: this.cameras[this.currentCamIndex].id } },
+                config,
+                onScanSuccess
+            );
         } catch (err) {
-            console.warn("[QRScanner] Gagal start deviceId:", err);
-    
             try {
                 await this.safeStop();
                 this.html5QrCode = new Html5Qrcode("reader");
-                await startWithConfig({ facingMode: "environment" });
+                await this.html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
             } catch (fallbackErr) {
-                console.error("[QRScanner] Fallback gagal:", fallbackErr);
+                console.error("[QRScanner] Start gagal total:", fallbackErr);
                 this.isScanning = false;
                 this.isTransitioning = false;
             }
         }
-    }
-    async stopScanner() {
-        if (!this.isScanning || this.isTransitioning || this.isStopping) {
-            console.log("[QRScanner] Skip stop, tidak dalam kondisi bisa distop.");
-            return;
-        }
 
+        this.isTransitioning = false;
+    }
+
+    async stopScanner() {
+        if (!this.isScanning || this.isTransitioning || this.isStopping) return;
         this.isStopping = true;
         this.isScanning = false;
         this.isTransitioning = true;
-
         document.getElementById("toggle-btn")?.classList.remove("active");
 
         try {
             await this.html5QrCode.stop({ clearScanRegion: true });
             await this.html5QrCode.clear();
-            console.log("[QRScanner] Scanner berhenti.");
         } catch (err) {
-            console.warn("[QRScanner] Gagal stop scanner:", err);
+            console.warn("[QRScanner] Gagal stop:", err);
         }
 
         this.isStopping = false;
         this.isTransitioning = false;
     }
+
     async safeStop() {
         if (this.isScanning) {
             try {
                 await this.stopScanner();
             } catch (e) {
-                console.warn("[QRScanner] safeStop gagal:", e);
+                console.warn("[QRScanner] safeStop error:", e);
             }
         }
     }
-    initGLFX() {
-        if (typeof fx !== 'undefined') {
-            this.fxCanvas = fx.canvas();
-        } else {
-            console.warn("WebGL FX library not found. Enhancer tidak aktif.");
+
+    async initCameras() {
+        try {
+            this.cameras = await Html5Qrcode.getCameras();
+            const switchBtn = document.getElementById("switch-camera");
+            if (switchBtn) {
+                if (this.cameras.length < 2) switchBtn.classList.add("dis-none");
+                else switchBtn.classList.remove("dis-none");
+            }
+        } catch (e) {
+            console.warn("[QRScanner] Init camera error:", e);
         }
     }
-    drawOverlay(result) {
-        if (!this.overlayCanvas || !result?.location) return;
-        const ctx = this.overlayCanvas.getContext("2d");
-        const { topLeftCorner, bottomRightCorner } = result.location;
-        const width = bottomRightCorner.x - topLeftCorner.x;
-        const height = bottomRightCorner.y - topLeftCorner.y;
-        const radius = 20;
 
-        ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-        ctx.strokeStyle = "#00FF00";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(topLeftCorner.x + radius, topLeftCorner.y);
-        ctx.lineTo(topLeftCorner.x + width - radius, topLeftCorner.y);
-        ctx.quadraticCurveTo(topLeftCorner.x + width, topLeftCorner.y, topLeftCorner.x + width, topLeftCorner.y + radius);
-        ctx.lineTo(topLeftCorner.x + width, topLeftCorner.y + height - radius);
-        ctx.quadraticCurveTo(topLeftCorner.x + width, topLeftCorner.y + height, topLeftCorner.x + width - radius, topLeftCorner.y + height);
-        ctx.lineTo(topLeftCorner.x + radius, topLeftCorner.y + height);
-        ctx.quadraticCurveTo(topLeftCorner.x, topLeftCorner.y + height, topLeftCorner.x, topLeftCorner.y + height - radius);
-        ctx.lineTo(topLeftCorner.x, topLeftCorner.y + radius);
-        ctx.quadraticCurveTo(topLeftCorner.x, topLeftCorner.y, topLeftCorner.x + radius, topLeftCorner.y);
-        ctx.closePath();
-        ctx.stroke();
+    async permissions() {
+        const camStatus = await this.cekKameraTersedia();
+        const izinStatus = await this.cekIzinKamera();
+
+        const scanHeader = document.querySelector('#scan h4');
+        const scanText = document.querySelector('.scan-notif-text');
+        const toggleBtn = document.querySelector('#toggle-btn');
+        const switchCams = document.querySelector('#switch-camera');
+        const codeInput = document.querySelector('#code-input-btn');
+
+        const showErrorUI = (icon, title, message, status = false) => {
+            scanHeader.innerHTML = `${icon} ${title}`;
+            scanText.innerHTML = message;
+            scanText.classList.toggle("dis-none", status);
+            scanHeader.classList.toggle("red", !status);
+            toggleBtn.classList.toggle("off", !status);
+            switchCams.classList.toggle("off", !status);
+        };
+
+        if(!camStatus.status || !izinStatus.status) {
+            toggleBtn.classList.add("dis-none")
+            switchCams.classList.add("dis-none")
+            codeInput.classList.remove("dis-none")
+            codeInput.classList.add("center")
+        }
+
+        if (!camStatus.status) {
+            showErrorUI('<i class="fas fa-camera-slash"></i> &nbsp;', camStatus.msg, 'Gunakan perangkat dengan kamera atau input manual &nbsp; <i class="fas fa-code"></i>.');
+            codeInput.classList.add("opacity-0", "off");
+            return false;
+        }
+
+        if (!izinStatus.status) {
+            showErrorUI('<i class="fas fa-lock"></i>  &nbsp;', 'Akses kamera ditolak', 'Ubah izin di pengaturan browser atau gunakan input manual &nbsp; <i class="fas fa-code"></i>.');
+            return false;
+        }
+
+        showErrorUI('', 'QRCode Scanner', '', true);
+        
+        toggleBtn.classList.remove("dis-none")
+        switchCams.classList.add("dis-none")
+        codeInput.classList.add("dis-none")
+        codeInput.classList.remove("center")
+        return true;
     }
-    clearOverlay() {
-        if (!this.overlayCanvas) return;
-        const ctx = this.overlayCanvas.getContext("2d");
-        ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+
+    async cekKameraTersedia() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasCamera = devices.some(device => device.kind === 'videoinput');
+            return hasCamera
+                ? { status: true, msg: 'Kamera tersedia' }
+                : { status: false, msg: 'Tidak ada kamera ditemukan' };
+        } catch (err) {
+            return { status: false, msg: 'Error deteksi kamera: ' + err.message };
+        }
     }
-    pauseAfterSuccess() {
-        this.stopScanner();
-        setTimeout(() => this.startScanner(), 3000);
+
+    async cekIzinKamera() {
+        try {
+            const status = await navigator.permissions.query({ name: 'camera' });
+            return {
+                status: status.state === "granted",
+                state: status.state,
+                msg: status.state
+            };
+        } catch (err) {
+            return { status: false, state: "error", msg: "Gagal cek izin kamera" };
+        }
     }
+
     bindEvents() {
         document.getElementById("toggle-btn")?.addEventListener("click", async () => {
             if (this.isBusy) return;
             if (this.isScanning) await this.stopScanner();
             else await this.startScanner();
         });
+
         document.getElementById("switch-camera")?.addEventListener("click", async () => {
-            if (this.isSwitchingCamera || this.cameras.length < 2) return;
-            
+            if (this.cameras.length < 2) return;
+            if (this.isSwitchingCamera) return;
+
             const btn = document.getElementById("switch-camera");
             this.isSwitchingCamera = true;
-            btn?.classList.add("off"); // disable tombol sementara
-            
+            btn?.classList.add("off");
+
             this.currentCamIndex = (this.currentCamIndex + 1) % this.cameras.length;
-    
+
             try {
                 if (this.isScanning) {
-                    await this.stopScanner(); // pastikan scanner dihentikan dengan aman
-                    await this.startScanner(); // langsung nyalain lagi dengan kamera baru
+                    await this.stopScanner();
+                    await this.startScanner();
                 }
             } catch (e) {
-                console.warn("[QRScanner] Error saat ganti kamera:", e);
+                console.warn("[QRScanner] Switch error:", e);
             }
+
             btn?.classList.remove("off");
             this.isSwitchingCamera = false;
         });
-        window.addEventListener("online",  () => console.log("[QRScanner] ONLINE"));
+
+        window.addEventListener("online", () => console.log("[QRScanner] ONLINE"));
         window.addEventListener("offline", () => console.log("[QRScanner] OFFLINE"));
     }
+
+    encodeCheck(base64Str) {
+        try {
+            const decodedStr = atob(base64Str);
+            const json = JSON.parse(decodedStr);
+            if (json.auth !== "DLHP" || typeof json.data !== "object") throw new Error("Format QR tidak valid");
+            return { status: true, data: json.data };
+        } catch (e) {
+            return { status: false, message: "Gagal decode: " + e.message };
+        }
+    }
+
+    initGLFX() {
+        if (typeof fx !== 'undefined') {
+            this.fxCanvas = fx.canvas();
+        } else {
+            console.warn("WebGL FX not found. Enhancer mati.");
+        }
+    }
 }
+
+
 
 class CodeHandler {
     constructor(main) {
@@ -1109,10 +996,14 @@ class ImageCaptureManager {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  window.imageManager = new ImageCaptureManager();
+  //window.imageManager = new ImageCaptureManager();
 });
 
 
+
+
+
+/*
 console.log(btoa(JSON.stringify({
     auth : "DLHP",
     data : {
@@ -1133,95 +1024,492 @@ console.log(btoa(JSON.stringify({
 })();
 
 
-/*
-class HTTPHelper {
-    constructor(proxyURL, options = {}) {
-        this.proxyURL = proxyURL;
-        this.defaultTimeout = options.timeout || 10000;
-        this.verbose = options.verbose || false; // aktifkan untuk console log detail
-    }
 
-    async post(data, timeoutOverride = null) {
-        const timeoutMs = timeoutOverride || this.defaultTimeout;
+class MainController {
+    constructor () {
+        this.state          = ""
+        this.apiURL         = "https://script.google.com/macros/s/AKfycbxi8iJiQCF5kWfrYHCZrSrajfUh6M2kVnWdEFQVrosY7eFkuOpLBUpMr66KfjNBr_rFcg/exec";
+        this.proxyURL       = "https://bbmctrl.dlhpambon2025.workers.dev?url=" + encodeURIComponent(this.apiURL);
+        this.qrScanner      = new QRScanner(this);
+        this.codeHandler    = new CodeHandler(this);
+        this.dataCtrl       = new dataCtrl(this);
+    }
+    async init() {
+        window.addEventListener("DOMContentLoaded", async () => {
+            await this.start();
+            this.pageNav()
+            this.toggleLoader(false, "Connect to server");
+        });
+        const resp = await fetch("https://quickchart.io/qr?text=eyJhdXRoIjoiRExIUCIsImRhdGEiOnsiTkFNQSI6IkJlbmRoYXJkIiwiTk9QT0wiOiJERSAxNjExIFNCIiwiTk9MQU1CVU5HIjoiQi0xNiIsIktFTkRBUkFBTiI6IkxhbWJvcmdpbmhpIn19&caption=Bend16&margin=6"
+        )
+    }
+    async start() {
+        this.toggleLoader(true, "Connect to server");
+        setInterval(async () => {
+            const start = performance.now();
+            try {
+                await fetch(this.apiURL, { method: "POST", body: "tesPing" });
+                const latency = Math.round(performance.now() - start);
+                [...document.querySelectorAll('.ping-text')].forEach(ping => ping.textContent = `${latency} ms`)
+            } catch {
+                console.warn("Ping failed. Reloading...");
+                window.location.reload();
+            }
+        }, 1000);
+    }
+    async post(data) {
+        const timeoutMs = 10000;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-        const startTime = Date.now();
-
-        // Step 1: Cek status jaringan lokal
-        if (!navigator.onLine) {
-            this._log("Offline: navigator.onLine === false");
-            return this._formatError("offline", "Perangkat tidak terhubung ke internet");
-        }
 
         try {
             const response = await fetch(this.proxyURL, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify(data),
                 signal: controller.signal
             });
 
             clearTimeout(timeout);
 
-            // Step 2: Tangani status HTTP (4xx, 5xx)
+            // ⛔ Error status HTTP (404, 500, dll)
             if (!response.ok) {
-                this._log(`HTTP Error ${response.status}: ${response.statusText}`);
-                return this._formatError("http_error", `HTTP ${response.status} - ${response.statusText || "Kesalahan pada server"}`, {
-                    code: response.status,
-                    statusText: response.statusText
-                });
-            }
-
-            // Step 3: Validasi content-type
-            const contentType = response.headers.get("Content-Type") || "";
-            if (!contentType.includes("application/json")) {
-                const rawText = await response.text();
-                this._log("Invalid Content-Type:", contentType);
-                return this._formatError("invalid_response", "Server tidak mengirimkan data JSON", { raw: rawText });
-            }
-
-            // Step 4: Parsing JSON
-            try {
-                const result = await response.json();
+                let errMsg = `HTTP Error ${response.status}`;
+                try {
+                    const text = await response.text();
+                    if (text && text.length < 1000) errMsg += `: ${text}`;
+                } catch (e) {
+                    errMsg += ` (gagal baca pesan error: ${e.message})`;
+                }
                 return {
-                    confirm: true,
-                    duration: Date.now() - startTime,
-                    data: result
+                    confirm: false,
+                    status: "http-error",
+                    msg: errMsg
                 };
-            } catch (jsonError) {
-                this._log("JSON parsing error:", jsonError);
-                return this._formatError("json_parse_error", "Gagal membaca response JSON", { message: jsonError.message });
             }
 
-        } catch (err) {
+            // ⚠️ Respon kosong
+            const contentLength = response.headers.get("content-length");
+            if (contentLength === "0" || !response.body) return {
+                confirm: false,
+                status: "empty-response",
+                msg: "Server mengirim respon kosong."
+            };
+            
+            // 🧩 Coba parse JSON
+            let json;
+            try {json = await response.json()}
+            catch (e) {
+                return {
+                    confirm: false,
+                    status: "json-parse-error",
+                    msg: "Respon server bukan JSON valid. " + e.message
+                };
+            }
+
+            // ❌ Struktur JSON tidak sesuai
+            if (!json || typeof json !== "object") return {
+                confirm: false,
+                status: "invalid-json",
+                msg: "Respon server bukan objek JSON yang valid."
+            };
+            // ✅ Berhasil
+            return json;
+
+        } catch (e) {
             clearTimeout(timeout);
+            // ⌛ Timeout
+            if (e.name === "AbortError") return {
+                confirm: false,
+                status: "timeout",
+                msg: `Request timeout setelah ${timeoutMs / 1000} detik.`
+            };
 
-            if (err.name === "AbortError") {
-                return this._formatError("timeout", `Request time out`);
-            }
-
-            if (err instanceof TypeError) {
-                return this._formatError("network_error", "Gagal terhubung ke server. Periksa koneksi atau URL.", { message: err.message });
-            }
-
-            // Catch unexpected or rare error
-            this._log("Unknown fetch error:", err);
-            return this._formatError("unknown_error", "Terjadi kesalahan tak terduga", { message: err.message });
+            // 🌐 Fetch error (offline, DNS, SSL, CORS, dll)
+            return {
+                confirm: false,
+                status: "network-error",
+                msg: "Gagal menghubungi server: " + e.message
+            };
         }
     }
 
-    _formatError(type, msg, extra = {}) {
-        return {
-            confirm: false,
-            status: type,
-            msg : msg,
-            ...extra
-        };
+    toggleLoader(show, text = "") {
+        const loaderBox     = document.querySelector("#loader");
+        const loaderText    = document.querySelector(".loader-text");
+        loaderText.textContent = text;
+        loaderBox.classList.toggle("dis-none", !show);
     }
+    showPage(elm) {
+        document.querySelectorAll(".content").forEach(el => el.classList.add("dis-none"));
+        document.querySelector(elm).classList.remove("dis-none");
+    }
+    pageNav(){
+        document.querySelectorAll(".to-content-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const target = btn.dataset.target
+                if(target == "#scan") {
+                    this.state = "Scan"
+                    this.toggleLoader(true, "Scanner configure")
+                    this.qrScanner.run()
+                } else if (target == "#code") {
+                    this.state = "Code"
+                    this.toggleLoader(true, "CodeInputer Configure")
+                    this.codeHandler.run()
+                } else if (target == '#home') {
+                    console.log("home")
+                    this.state = ""
+                    this.showPage("#home")
+                    this.toggleLoader(false, "...")
+                }
+            })
+        })
+    }
+    urlChecker(url) {
+        const params = new URLSearchParams(url);
+        if (!params.has("code")) return false;
 
-    _log(...args) {
-        if (this.verbose) console.warn("[HTTPHelper]", ...args);
+        try {
+            const decoded = atob(params.get("data"));
+            const data = JSON.parse(decoded);
+
+            if (data.auth != "DLHP") return false;
+            this.resetScanner()
+            return new dataCtrl().scannerCtrl(data);
+        } catch (e) {
+            return false;
+        }
     }
 }
- */
+class QRScanner {
+    constructor(main) {
+        this.main               = main;
+        this.html5QrCode        = new Html5Qrcode("reader");
+        this.cameras            = [];
+        this.currentCamIndex    = 0;
+        this.isScanning         = false;
+        this.isBusy             = false;
+        this.lastPermission     = null;
+        this.seenQRCodes        = new Set();
+        this.overlayCanvas      = document.getElementById("debug-overlay");
+        this.enhanceCanvas      = document.createElement("canvas");
+        this.enhanceCanvas.width    = 300;
+        this.enhanceCanvas.height   = 500;
+        this.isSwitchingCamera      = false;
+        this.isScanning         = false;
+        this.isStopping         = false;
+        this.enhanceCtx         = this.enhanceCanvas.getContext("webgl") || this.enhanceCanvas.getContext("experimental-webgl");
+        this.initGLFX();
+    }
+    async initCameras() {
+        try {
+            this.cameras = await Html5Qrcode.getCameras();
+            console.log(`[QRScanner] Kamera ditemukan: ${this.cameras.length}`);
+
+            const switchBtn = document.getElementById("switch-camera");
+            if (switchBtn) {
+                if (this.cameras.length < 2) switchBtn.classList.add("off");
+                else switchBtn.classList.remove("off");
+            }
+        } catch (e) {
+            console.warn("[QRScanner] Gagal inisialisasi kamera:", e);
+        }
+    }
+    async applyEnhanceFilter(result) {
+        try {
+            const video = document.querySelector("video");
+            if (!video || !this.fxCanvas) return true;
+
+            const tmpCanvas = document.createElement("canvas");
+            tmpCanvas.width = video.videoWidth;
+            tmpCanvas.height = video.videoHeight;
+            const ctx = tmpCanvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, tmpCanvas.width, tmpCanvas.height);
+            const texture = this.fxCanvas.texture(tmpCanvas);
+            this.fxCanvas.draw(texture)
+                .brightnessContrast(0.1, 0.2) // boost brightness & contrast
+                .unsharpMask(20, 2)            // sharpen
+                .update();
+            return true;
+        } catch (e) {
+            console.warn("[Enhancer] Gagal apply filter:", e);
+            return true; // tetap lanjut scan meskipun gagal
+        }
+    }
+    async restartScanner() {
+        if (!this.isScanning || this.isBusy) return;
+        try {
+            await this.html5QrCode.stop();
+            await this.html5QrCode.clear();
+        } catch (e) {
+            console.warn("[QRScanner] Restart gagal stop/clear:", e);
+        }
+        this.html5QrCode = new Html5Qrcode("reader");
+        await this.startScanner();
+    }
+    encodeCheck(base64Str) {
+        try {
+            const decodedStr = atob(base64Str); // Decode Base64
+            const json = JSON.parse(decodedStr); // Parse jadi JSON
+
+            if (json.auth !== "DLHP" || typeof json.data !== "object") throw new Error("Format DLHP tidak valid");
+            return {
+                status: true,
+                message: "QR Valid DLHP",
+                data: json.data,
+                auth: json.auth
+            };
+        } catch (e) {
+            return {
+                status: false,
+                message: "Gagal decode DLHP: " + e.message
+            };
+        }
+    }
+    async run() {
+        this.main.state = "Scan";
+        this.main.showPage("#scan");
+
+        await this.initCameras();
+        const ok = await this.permissions();
+        if (!ok) return;
+
+        this.bindEvents();
+
+        setInterval(async () => {
+            if (this.main.state !== "Scan") return;
+            const izin = await this.cekIzinKamera();
+            if (izin.state !== this.lastPermission) {
+                this.lastPermission = izin.state;
+                await this.permissions();
+            }
+        }, 1000);
+    }
+    async cekIzinKamera() {
+        try {
+            const status = await navigator.permissions.query({ name: 'camera' });
+            switch (status.state) {
+                case 'granted': return { status: true,  state: "granted", msg: "Kamera sudah diizinkan" };
+                case 'prompt':  return { status: false, state: "prompt", msg: "Meminta izin kamera..." };
+                case 'denied':  return { status: false, state: "denied", msg: "Akses kamera ditolak" };
+                default:        return { status: false, state: "unsupport", msg: "Permissions API tidak didukung" };
+            }
+        } catch (err) {
+            console.error('Error cek izin kamera:', err);
+            return { status: false, state: "error", msg: "Gagal cek izin kamera: " + err };
+        }
+    }
+    async permissions() {
+        const camStatus     = await this.cekKameraTersedia();
+        const izinStatus    = await this.cekIzinKamera();
+
+        const scanHeader    = document.querySelector('#scan h4');
+        const scanText      = document.querySelector('.scan-notif-text');
+        const toggleBtn     = document.querySelector('#toggle-btn');
+        const switchCams    = document.querySelector('#switch-camera');
+        const codeInput     = document.querySelector('#code-input-btn');
+
+        const showErrorUI   = (icon, title, message, status = false) => {
+            scanHeader.innerHTML = `${icon} ${title}`;
+            scanText.innerHTML = message;
+
+            if (status) {
+                scanText.classList.add("dis-none");
+                scanHeader.classList.remove("red");
+                toggleBtn.classList.remove("off");
+                switchCams.classList.remove("off");
+            } else {
+                scanText.classList.remove("dis-none");
+                scanHeader.classList.add("red");
+                toggleBtn.classList.add("off");
+                switchCams.classList.add("off");
+            }
+            codeInput.classList.remove("off");
+        };
+
+        if (!camStatus.status) {
+            return showErrorUI('<i class="fas fa-camera-slash"></i>', camStatus.msg, 'Gunakan perangkat dengan kamera atau input manual.');
+        }
+
+        if (!izinStatus.status) {
+            return showErrorUI('<i class="fas fa-lock"></i>', 'Akses kamera ditolak', 'Ubah izin di pengaturan browser atau gunakan input manual.');
+        }
+
+        scanHeader.innerHTML = "QRCode Scanner";
+        scanHeader.classList.remove("red");
+        scanText.classList.add("dis-none");
+        toggleBtn.classList.remove("off");
+        switchCams.classList.remove("off");
+        codeInput.classList.remove("off");
+
+        return true;
+    }
+    async cekKameraTersedia() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const kameraAda = devices.some(device => device.kind === 'videoinput');
+            return kameraAda
+                ? { status: true, state: 'detected', msg: 'Kamera terdeteksi.' }
+                : { status: false, state: 'not detected', msg: 'Tidak ada kamera terdeteksi di perangkat ini' };
+        } catch (err) {
+            console.error('[QRScanner] Gagal deteksi kamera:', err);
+            return { status: false, state: "error", msg: 'Gagal mendeteksi kamera: ' + err.message };
+        }
+    }
+    async startScanner() {
+        const toggleBtn = document.getElementById("toggle-btn");
+        if (this.isScanning || this.isTransitioning || this.isStopping) {
+            console.warn("[QRScanner] Tidak bisa start, sedang transisi atau scanning aktif");
+            return;
+        }
+    
+        if (this.cameras.length === 0) await this.initCameras();
+        if (this.cameras.length === 0) {
+            console.error("[QRScanner] Tidak ada kamera tersedia");
+            return;
+        }
+    
+        this.isTransitioning = true;
+        this.isScanning = true;
+        toggleBtn?.classList.add("active");
+    
+        const startWithConfig = async (config) => {
+            try {
+                await this.html5QrCode.start(
+                    config,
+                    { fps: 60, qrbox: { width: 300, height: 500 } },
+                    async (decodedText, result) => {
+                        this.drawOverlay(result);
+                        document.getElementById("result").innerText = `Hasil: ${decodedText}`;
+                        const checks = await this.encodeCheck(decodedText);
+                        if (!checks.status) return;
+                        await this.main.dataCtrl.run(checks.data);
+                    }
+                );
+                console.log("[QRScanner] Scanner dimulai dengan config:", config);
+                this.isTransitioning = false;
+            } catch (err) {
+                throw err;
+            }
+        };
+    
+        try {
+            await startWithConfig({ deviceId: { exact: this.cameras[this.currentCamIndex].id } });
+        } catch (err) {
+            console.warn("[QRScanner] Gagal start deviceId:", err);
+    
+            try {
+                await this.safeStop();
+                this.html5QrCode = new Html5Qrcode("reader");
+                await startWithConfig({ facingMode: "environment" });
+            } catch (fallbackErr) {
+                console.error("[QRScanner] Fallback gagal:", fallbackErr);
+                this.isScanning = false;
+                this.isTransitioning = false;
+            }
+        }
+    }
+    async stopScanner() {
+        if (!this.isScanning || this.isTransitioning || this.isStopping) {
+            console.log("[QRScanner] Skip stop, tidak dalam kondisi bisa distop.");
+            return;
+        }
+
+        this.isStopping = true;
+        this.isScanning = false;
+        this.isTransitioning = true;
+
+        document.getElementById("toggle-btn")?.classList.remove("active");
+
+        try {
+            await this.html5QrCode.stop({ clearScanRegion: true });
+            await this.html5QrCode.clear();
+            console.log("[QRScanner] Scanner berhenti.");
+        } catch (err) {
+            console.warn("[QRScanner] Gagal stop scanner:", err);
+        }
+
+        this.isStopping = false;
+        this.isTransitioning = false;
+    }
+    async safeStop() {
+        if (this.isScanning) {
+            try {
+                await this.stopScanner();
+            } catch (e) {
+                console.warn("[QRScanner] safeStop gagal:", e);
+            }
+        }
+    }
+    initGLFX() {
+        if (typeof fx !== 'undefined') {
+            this.fxCanvas = fx.canvas();
+        } else {
+            console.warn("WebGL FX library not found. Enhancer tidak aktif.");
+        }
+    }
+    drawOverlay(result) {
+        if (!this.overlayCanvas || !result?.location) return;
+        const ctx = this.overlayCanvas.getContext("2d");
+        const { topLeftCorner, bottomRightCorner } = result.location;
+        const width = bottomRightCorner.x - topLeftCorner.x;
+        const height = bottomRightCorner.y - topLeftCorner.y;
+        const radius = 20;
+
+        ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        ctx.strokeStyle = "#00FF00";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(topLeftCorner.x + radius, topLeftCorner.y);
+        ctx.lineTo(topLeftCorner.x + width - radius, topLeftCorner.y);
+        ctx.quadraticCurveTo(topLeftCorner.x + width, topLeftCorner.y, topLeftCorner.x + width, topLeftCorner.y + radius);
+        ctx.lineTo(topLeftCorner.x + width, topLeftCorner.y + height - radius);
+        ctx.quadraticCurveTo(topLeftCorner.x + width, topLeftCorner.y + height, topLeftCorner.x + width - radius, topLeftCorner.y + height);
+        ctx.lineTo(topLeftCorner.x + radius, topLeftCorner.y + height);
+        ctx.quadraticCurveTo(topLeftCorner.x, topLeftCorner.y + height, topLeftCorner.x, topLeftCorner.y + height - radius);
+        ctx.lineTo(topLeftCorner.x, topLeftCorner.y + radius);
+        ctx.quadraticCurveTo(topLeftCorner.x, topLeftCorner.y, topLeftCorner.x + radius, topLeftCorner.y);
+        ctx.closePath();
+        ctx.stroke();
+    }
+    clearOverlay() {
+        if (!this.overlayCanvas) return;
+        const ctx = this.overlayCanvas.getContext("2d");
+        ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+    }
+    pauseAfterSuccess() {
+        this.stopScanner();
+        setTimeout(() => this.startScanner(), 3000);
+    }
+    bindEvents() {
+        document.getElementById("toggle-btn")?.addEventListener("click", async () => {
+            if (this.isBusy) return;
+            if (this.isScanning) await this.stopScanner();
+            else await this.startScanner();
+        });
+        document.getElementById("switch-camera")?.addEventListener("click", async () => {
+            if (this.isSwitchingCamera || this.cameras.length < 2) return;
+            
+            const btn = document.getElementById("switch-camera");
+            this.isSwitchingCamera = true;
+            btn?.classList.add("off"); // disable tombol sementara
+            
+            this.currentCamIndex = (this.currentCamIndex + 1) % this.cameras.length;
+    
+            try {
+                if (this.isScanning) {
+                    await this.stopScanner(); // pastikan scanner dihentikan dengan aman
+                    await this.startScanner(); // langsung nyalain lagi dengan kamera baru
+                }
+            } catch (e) {
+                console.warn("[QRScanner] Error saat ganti kamera:", e);
+            }
+            btn?.classList.remove("off");
+            this.isSwitchingCamera = false;
+        });
+        window.addEventListener("online",  () => console.log("[QRScanner] ONLINE"));
+        window.addEventListener("offline", () => console.log("[QRScanner] OFFLINE"));
+    }
+}*/

@@ -62,7 +62,7 @@
 
     <div id="content-box" class="relative hidden">
 
-        <div class="content absolute-top w-100 h-100 clr-white dis-none" id="home">
+        <div class="content absolute-top w-100 h-100 clr-white" id="home">
             
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
@@ -87,20 +87,19 @@
         <div class="content grid-center relative dis-none" id="scan">
             <div id="container" class="relative">
                 <div class="skeleton-box"></div>
-                <img src="" alt="" id="img-preview" />
                 <div id="reader"></div>
                 <canvas id="debug-overlay"></canvas>
                 <h4 class="align-center fz-20 clr-white" id="scan-head-notif">...</h4>
-                <p class="scan-notif-text dis-none align-justify w-100 p-15 clr-white">
+                <p class="scan-notif-text dis-none align-center w-100 p-15 clr-white">
                     Akses kamera ditolak. <br />
                     Silahkan ubah izin akses kamera di pengaturan browser Anda agar dapat menggunakan fitur scanner atau tekan tombol <i class="fas fa-code"></i> untuk memasukan kode.
                 </p>
-                <div class="flex-evenly relative" id="cam-buttons">
-                    <button id="switch-camera" class="off"><i class="fas fa-camera-rotate pointer"></i></button>
-                    <button id="toggle-btn" class="off grid-center pointer"><i class="fas fa-qrcode fz-20 clr-default"></i></button>
-                    <button id="code-input-btn" class="off fz-2 to-content-btn" data-target="#code"><i class="fas fa-code pointer  "></i></button>
+                <div class="flex-evenly" id="cam-buttons">
+                    <button id="switch-camera" class="dis-none" ><i class="fas fa-camera-rotate pointer"></i></button>
+                    <button id="toggle-btn" class="dis-none grid-center pointer"><i class="fas fa-qrcode fz-20 clr-default"></i></button>
+                    <button id="code-input-btn" class="dis-none fz-2 to-content-btn" data-target="#code"><i class="fas fa-code pointer  "></i></button>
                 </div>
-                <div id="scan-guide-line" class="grid-center dis-none br-white">
+                <div id="scan-guide-line" class="grid-center br-white">
                     <div class="line ln1"></div>
                     <div class="line ln2"></div>
                     <div class="line ln3"></div>
@@ -115,7 +114,7 @@
                         </div>
                     </div>
                 </div>
-                <span id="result" class="absolute-center">text</span>
+                <span id="result" class="absolute-center dis-none">text</span>
             </div>
         </div>
         
@@ -155,7 +154,7 @@
             </div>
         </div>
 
-        <div class="content pt-5 relative scroll" id="data">
+        <div class="content pt-5 relative scroll dis-none" id="data">
             <div class="driver-basic p-10 clr-white">
                 <div class="driver-img">
                     <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
@@ -242,7 +241,7 @@
                 <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
             </div>
 
-            <div id="data-images" class="w-100 h-100 p-20 fixed-top-left grid-center">
+            <div id="data-images" class="dis-none h-100 p-20 fixed-top-left grid-center">
                 <div class="img-cam p-15 borad-10 default relative hidden" id="img-cam">
                 
                     <!-- Video Kamera -->
@@ -342,7 +341,7 @@
     <script src="/js/scanner.js"></script>
     <script src="/js/class.js"></script>
     <script>
-        //new MainController().init()
+        new MainController().init()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");
