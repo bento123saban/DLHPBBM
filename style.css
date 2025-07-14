@@ -950,7 +950,10 @@ nav {
     background: linear-gradient(45deg, #fff, #eee);
     min-width: 300px;
 }
-.form-liter h3 {border-radius: 7px 7px 0 0;}
+.form-liter h3 {
+    border-radius: 7px 7px 0 0;
+    border: 2px solid;
+}
 
 #liter-close {
     position: absolute;
