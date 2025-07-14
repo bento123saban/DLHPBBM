@@ -29,7 +29,7 @@ class MainController {
                 const latency = Math.round(performance.now() - start);
                 document.querySelectorAll(".ping-text").forEach(ping => ping.textContent = `${latency} ms`);
             } catch {
-                console.warn("Ping failed. Reloading...");
+                //console.warn("Ping failed. Reloading...");
                 clearInterval(this.pingTimer);
                 window.location.reload();
             }
@@ -166,6 +166,7 @@ class QRScanner {
 
     async startScanner() {
         const toggleBtn = document.getElementById("toggle-btn");
+        toggleBtn.innerHTML = '<i class="clr-red bolder fas fa-x"></i>'
         if (this.isScanning || this.isTransitioning || this.isStopping) return;
 
         if (this.cameras.length === 0) await this.initCameras();
@@ -211,6 +212,7 @@ class QRScanner {
     }
 
     async stopScanner() {
+        document.querySelector('#toggle-btn').innerHTML = '<i class="fas fa-qrcode"></i>'
         if (!this.isScanning || this.isTransitioning || this.isStopping) return;
         this.isStopping = true;
         this.isScanning = false;
@@ -243,6 +245,7 @@ class QRScanner {
             this.cameras = await Html5Qrcode.getCameras();
             const switchBtn = document.getElementById("switch-camera");
             if (switchBtn) {
+                console.log('camsLenth : ' + this.cameras.length)
                 if (this.cameras.length < 2) switchBtn.classList.add("dis-none");
                 else switchBtn.classList.remove("dis-none");
             }
@@ -289,9 +292,8 @@ class QRScanner {
         }
 
         showErrorUI('', 'QRCode Scanner', '', true);
-        
+        document.querySelector('#toggle-btn').innerHTML = '<i class="fas fa-qrcode"></i>'
         toggleBtn.classList.remove("dis-none")
-        switchCams.classList.add("dis-none")
         codeInput.classList.add("dis-none")
         codeInput.classList.remove("center")
         return true;
@@ -375,8 +377,6 @@ class QRScanner {
         }
     }
 }
-
-
 
 class CodeHandler {
     constructor(main) {
