@@ -945,6 +945,31 @@ nav {
     backdrop-filter: blur(4px);
 }
 
+/* Dexlite Button Example */
+.dexlite-btn {
+  background-color: #009B9A;
+  color: #FFFFFF;
+  border: 1px solid #005A5A;
+}
+.dexlite-btn:hover {
+  background-color: #007F7E;
+}
+.dexlite-btn:active {
+  background-color: #006665;
+}
+/* Pertamax Button Example */
+.pertamax-btn {
+  background-color: #0033A0;
+  color: #FFFFFF;
+  border: 1px solid #001A4F;
+}
+.pertamax-btn:hover {
+  background-color: #00287A;
+}
+.pertamax-btn:active {
+  background-color: #001D5C;
+}
+
 .form-liter {
     box-shadow: 0 0 30px rgba(0,0,0, .4);
     background: linear-gradient(45deg, #fff, #eee);
