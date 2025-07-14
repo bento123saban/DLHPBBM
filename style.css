@@ -951,40 +951,13 @@ nav {
     min-width: 300px;
 }
 .form-liter h3 {border-radius: 7px 7px 0 0;}
-#liter-box {
-    width: 80% !important;
-    margin: 0 auto;
-    display: flex;
-    justify-content: flex-end;
-    border: 2px solid;
-    border-radius: 4px;
-    text-align: center;
-}
-#liter-box label {
-    padding-top: 5px;
-    padding-right: 10px;
-    color: grey;
-}
-#form-liter input { 
-    display: block;
-    padding: 7px !important;
-    padding-left: 15px !important;
-    border: none;
-    width: 120px !important;
-    background: transparent;
-    outline: none;
-    text-align: center;
-    font-weight: bolder;
-    color: green;
-}
+
 #liter-close {
     position: absolute;
     top: -10px !important;
     right: -10px !important;
-    color: green !important;
-    border: 2px solid green !important;
+    border: 2px solid !important;
     background: white;
-    font-size: 16px;
     height: 30px;
     aspect-ratio: 1;
     border-radius: 100px;
