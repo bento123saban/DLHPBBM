@@ -503,7 +503,7 @@ class dataCtrl {
             { type: 'pertamax', elm: document.querySelector("#pertamax") },
             { type: 'dexlite', elm: document.querySelector("#dexlite") }
         ];
-        this.liters         = document.querySelectorAll("span.liter-number");
+        this.literx         = document.querySelectorAll("span.liter-number");
         this.lanjutkan      = document.querySelector('#lanjutkan');
         this.afterBox       = document.querySelector('#after-box');
         this.formLiter      = document.querySelector('#form-liter');
@@ -568,38 +568,35 @@ class dataCtrl {
             typeValue = type.type
         })
 
-        this.liters.forEach(liter => {
+        this.literx.forEach(liter => {
             if(!liter.classList.contains("on")) return
             literParam = true
             literValue = liter.textContent
         })
-
-        if (!typeParam || !typeValue) return this.literError.textContent = "Pilih jenis BBM.";
-        if (!literParam || !literValue) returnthis.literError.textContent = "Pilih jumlah liter.";
         
-        return "Bendhard16"
-        /*
-            if (this.liter.value == 0) this.liter.value = "";
-            if (this.liter.value === "") {
-                this.literError.textContent = "Masukan angka.";
-            } else if (this.liter.value.length >= 1) {
-                this.literError.textContent = "Masukan jumlah liter.";
+        this.literError.textContent = "";
+        if (typeParam && literParam) {
+            
+            this.literError.classList.remove("clr-red");
+            this.literError.classList.add("dis-none");
+            this.literError.textContent = "";
+            return {
+                confirm : "Bendhard16",
+                type    : typeValue,
+                liter   : literValue
             }
-            this.liter.value = this.liter.value.replace(/[^0-9]/g, '');
-            if (this.liter.value.length > 3) this.liter.value = this.liter.value.substring(0, 3);
-        */
+        }
+        console.log("TRUE")
+        if (!typeParam || !typeValue) this.literError.innerHTML = "Pilih jenis BBM. ";
+        if (!literParam || !literValue) this.literError.innerHTML += "Pilih jumlah liter.";
+        this.literError.classList.add("clr-red");
+        return {confirm : false}
     }
     handleSubmit(buttonId) {
         if (buttonId == "resent") this.rx += 1;
         if (this.rx >= 1) this.toReport.classList.remove("dis-none");
-        if (this.handleLiterInput() === "Bendhard16") {
-            console.log("RUN SUBMIT")
-            this.addTrxData(this.getValue());
-            this.literError.classList.remove("clr-red");
-        } else {
-            this.literError.textContent = "Masukan jumlah liter.";
-            this.literError.classList.add("clr-red");
-        }
+        if (!this.handleLiterInput().confirm) return console.log("X")
+        this.addTrxData(this.getValue());
     }
     toggleLiterForm(show) {
         this.notif.classList.toggle('dis-none', !show);
@@ -683,25 +680,18 @@ class dataCtrl {
     getValue() {
         return [
             this.TRXID,
-            this.theData.NOPOL + "" + this.theData.CODE,
+            this.theData.NOLAMBUNG + "-" + this.theData.CODE,
             this.getDateTime(), // col2
             (this.konfirmasi().countFalse.length >= 1) ? "false" : "true", // col3
             this.note(), // col4
             document.querySelector("#foto").dataset.value, // col5
             document.querySelector("#nama").dataset.value + " - " + this.theData.NAMA, // col6
             document.querySelector("#nopol").dataset.value + " - " + this.theData.NOPOL, // col7
-            document.querySelector("#nolambung").dataset.value + " - " + this.theData.NOLAMBUNG, // col8
+            document.querySelector("#nolambung").dataset.value + " - " + this.theData.NOLAMBUNG + "-" + this.theData.CODE, // col8
             document.querySelector("#kendaraan").dataset.value + " - " + this.theData.KENDARAAN, // col9
-            this.liter.value, // col10
-            "unknown", // col11
-            "", // col12
-            "", // col13
-            "", // col14
-            "", // col15
-            "", // col16
-            "", // col17
-            "", // col18
-            ""
+            this.handleLiterInput().liter,
+            this.handleLiterInput().type,            
+            "loc: unknown", // col11
             ];
     }
     konfirmasi() {
@@ -732,13 +722,14 @@ class dataCtrl {
         console.log(json)
         if (!json) return this.afterRespon("#failed", "Request undefined")
         if(!json.confirm) return this.afterRespon("#failed", json.msg);
-        else return this.afterRespon("#success", json.msg);
+        this.afterRespon("#success", json.msg)
     }
-    clearFormData() {
+    clearFormData(formExcept= "") {
         if (this.liter) this.liter.value = "";
         this.toReport?.classList.add("dis-none");
         this.notif?.classList.add("dis-none");
         document.querySelectorAll(".form-liter").forEach(form => form.classList.add("dis-none"));
+        //document.querySelector(formExcept)?.classList.remove("dis-none")
         this.formGroups?.forEach(group => {
             group.dataset.value = "";
             group.classList.remove("highlight");
@@ -760,6 +751,7 @@ class dataCtrl {
             span    = elm.querySelector("span");
         span.textContent = (text.length >= 1) ? text : span.textContent
         elm.classList.remove("dis-none");
+        console.log("BEn")
         this.main.toggleLoader(false)
         if (selector === "#success" || selector === "#report-done") {
             this.formReport.classList.add("dis-none");
