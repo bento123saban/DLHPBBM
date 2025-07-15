@@ -530,8 +530,6 @@ class dataCtrl {
     init() {
         document.querySelectorAll(".bbm-btn").forEach(btn => {
             btn.onclick = () => {
-                btn.querySelector("input").click()
-                console.log("tes click")
                 document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
                 btn.classList.add("on")
             };
@@ -765,7 +763,6 @@ class dataCtrl {
         this.lanjutkan?.classList.add("cancel");
         this.lanjutkanText?.classList.remove("dis-none");
     }
-
     afterRespon(selector, text = "") {
         const elm   = document.querySelector(selector),
             span    = elm.querySelector("span");
@@ -1058,7 +1055,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 
+document.querySelectorAll(".bbm-btn").forEach(btn => {
+    btn.onclick = () => {
+        console.log("tes click")
+        document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
+        btn.classList.add("on")
+    };
+})
 
+document.querySelectorAll("span.liter-number").forEach(span => {
+    span.onclick = () => {
+        document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
+        span.classList.add("on")
+    }
+})
 
 /*
 console.log(btoa(JSON.stringify({

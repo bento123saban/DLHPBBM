@@ -990,26 +990,23 @@ nav {
     color: white;
 }
 
-.liter-chose {
-    margin: 0 auto;
-    flex-wrap: wrap;
-}
 .liter-chose span.liter-number {
     width: 35px;
     aspect-ratio: 1;
-    border: 2px solid darkcyan;
+    border: 2px solid !important;
     color: darkcyan;
     text-align: center;
     display: block;
     border-radius: 4px;
     padding-top: 5px;
     cursor: pointer;
+    padding-top: 6px;
 }
 
 .liter-chose span.liter-number.on {
-    background: darkcyan;
     color: white;
     font-weight: bolder;
+    background: darkcyan;
 }
 
 #liter-close {
