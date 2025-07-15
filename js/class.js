@@ -179,7 +179,7 @@ class QRScanner {
 
         this.state.transitioning = true;
         this.state.scanning = true;
-        this.toggleScanUI(true);
+        //this.toggleScanUI(true);
 
         const config = { fps: 60, qrbox: { width: 300, height: 500 } };
         const onScanSuccess = async (decodedText) => {
@@ -219,7 +219,7 @@ class QRScanner {
         this.state.scanning = false;
         this.state.transitioning = true;
 
-        this.toggleScanUI(false);
+        //this.toggleScanUI(false);
 
         try {
             await this.html5QrCode.stop({ clearScanRegion: true });
@@ -285,7 +285,7 @@ class QRScanner {
         this.dom.codeInputBtn.classList.remove("center");
         this.dom.toggleBtn.classList.remove("dis-none");
         showErrorUI('', 'QRCode Scanner', '', true);
-        this.toggleScanUI(false);
+        //this.toggleScanUI(false);
         return true;
     }
     async cekKameraTersedia() {

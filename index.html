@@ -62,7 +62,7 @@
 
     <div id="content-box" class="relative hidden">
 
-        <div class="content absolute-top w-100 h-100 clr-white" id="home">
+        <div class="content absolute-top w-100 h-100 clr-white dis-none" id="home">
             
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <div class="content pt-5 relative scroll dis-none" id="data">
+        <div class="content pt-5 relative scroll" id="data">
             <div class="driver-basic p-10 clr-white">
                 <div class="driver-img">
                     <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
@@ -238,7 +238,7 @@
                 <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
             </div>
             <span class="pointer dis-none" id="add-imgx">add image</span>
-            <div id="data-images" class="dis-none relative h-100 p-20 grid-center">
+            <div id="data-images" class="relative h-100 p-20 grid-center">
                 <div class="img-cam p-15 borad-10 default relative hidden" id="img-cam">
                 
                     <!-- Video Kamera -->
@@ -246,9 +246,9 @@
 
                     <!-- Tombol Kontrol -->
                     <div class="img-cam-btn flex-evenly w-100 p-15">
-                        <button id="img-cams"><i class="fas fa-camera-rotate opacity-0 off"></i></button>
-                        <button id="img-capture"><i class="fas fa-images"></i></button>
-                        <button id="img-count" class="opacity-0 off" data-count="1">
+                        <button id="img-cams"><i class="fas fa-camera-rotate opacity-0 off pointer"></i></button>
+                        <button id="img-capture" class=" pointer"><i class="fas fa-images"></i></button>
+                        <button id="img-count" class="opacity-0 off pointer" data-count="1">
                             <i class="fas fa-image"></i>
                         </button>
                     </div>
@@ -267,7 +267,7 @@
                         </div>
                     </div>
                 </div>
-                <span id="img-cam-msg" class="img-cam-msg absolute-center dis-block p-10 blue ">Belum ada gambar</span>
+                <span id="img-cam-msg" class="dis-none absolute-center dis-block p-10 blue ">Belum ada gambar</span>
             </div>
 
             <div class="data-notif grid-center dis-none">
@@ -341,8 +341,8 @@
     <script src="/js/scanner.js"></script>
     <script src="/js/class.js"></script>
     <script>
-        new MainController().init()
-        //new ImageCaptureManager()
+        //new MainController().init()
+        new ImageCaptureManager()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");
