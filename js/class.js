@@ -584,24 +584,26 @@ class dataCtrl {
             literValue = liter.textContent
         })
 
-
-
-
-        return
-        if (this.liter.value == 0) this.liter.value = "";
-        if (this.liter.value === "") {
-            this.literError.textContent = "Masukan angka.";
-        } else if (this.liter.value.length >= 1) {
-            this.literError.textContent = "Masukan jumlah liter.";
-        }
-        this.liter.value = this.liter.value.replace(/[^0-9]/g, '');
-        if (this.liter.value.length > 3) this.liter.value = this.liter.value.substring(0, 3);
+        if (!typeParam || !typeValue) return this.literError.textContent = "Pilih jenis BBM.";
+        if (!literParam || !literValue) returnthis.literError.textContent = "Pilih jumlah liter.";
+        
+        return "Bendhard16"
+        /*
+            if (this.liter.value == 0) this.liter.value = "";
+            if (this.liter.value === "") {
+                this.literError.textContent = "Masukan angka.";
+            } else if (this.liter.value.length >= 1) {
+                this.literError.textContent = "Masukan jumlah liter.";
+            }
+            this.liter.value = this.liter.value.replace(/[^0-9]/g, '');
+            if (this.liter.value.length > 3) this.liter.value = this.liter.value.substring(0, 3);
+        */
     }
     handleSubmit(buttonId) {
         console.log("liter", this.liter.value);
         if (buttonId == "resent") this.rx += 1;
         if (this.rx >= 1) this.toReport.classList.remove("dis-none");
-        if (this.liter.value >= 1) {
+        if (this.handleLiterInput() === "Bendhard16") {
             this.addTrxData(this.getValue());
             this.literError.classList.remove("clr-red");
         } else {
