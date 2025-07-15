@@ -13,7 +13,7 @@ class MainController {
 
     init() {
         window.addEventListener("DOMContentLoaded", async () => {
-            //await this.start();
+            await this.start();
             this.pageNav();
             this.toggleLoader(false, "Connect to server");
         });
@@ -553,12 +553,10 @@ class dataCtrl {
         
         this.lanjutkan.addEventListener("click", () => this.handleLanjutkan());
         
-        
         this.literClose.addEventListener("click", () => this.toggleLiterForm(false));
-        this.liter.addEventListener("keyup", (e) => this.handleLiterInput());
-
         
         [this.submit, this.resent].forEach(btn => {
+            if(!this.handleLanjutkan()) return
             btn.addEventListener("click", () => this.handleSubmit(btn.id));
         });
         

@@ -62,7 +62,7 @@
 
     <div id="content-box" class="relative hidden">
 
-        <div class="content absolute-top w-100 h-100 clr-white dis-none" id="home">
+        <div class="content absolute-top w-100 h-100 clr-white" id="home">
             
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <div class="content pt-5 relative scroll" id="data">
+        <div class="content pt-5 relative scroll dis-none" id="data">
             <div class="driver-basic p-10 clr-white">
                 <div class="driver-img">
                     <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
@@ -269,7 +269,7 @@
                 <span id="img-cam-msg" class="img-cam-msg absolute-center dis-block p-10 blue ">Belum ada gambar</span>
             </div>
 
-            <div class="data-notif grid-center">
+            <div class="data-notif grid-center dis-none">
                 <div class="form-liter relative white p-5 borad-10 pb-2"  id="form-liter">
                     <i class="fas fa-x grid-center pointer clr-default br-default fz-12" id="liter-close"></i>
                     <h3 class="align-center default p-20 m-0 br-default">Pengisian BBM</h3>
@@ -324,6 +324,7 @@
                 </div>
             </div>
         </div>
+        
         <div class="content dis-none" id="loader">
             <div class="loaderx grid-center">
                 <div class="loader-content relative clr-default">
@@ -339,7 +340,7 @@
     <script src="/js/scanner.js"></script>
     <script src="/js/class.js"></script>
     <script>
-        //new MainController().init()
+        new MainController().init()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");
