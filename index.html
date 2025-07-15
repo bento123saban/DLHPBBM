@@ -273,9 +273,23 @@
                 <div class="form-liter relative white p-5 borad-10 pb-2"  id="form-liter">
                     <i class="fas fa-x grid-center pointer clr-default br-default fz-12" id="liter-close"></i>
                     <h3 class="align-center default p-20 m-0 br-default">Pengisian BBM</h3>
-
+                    <span class="dis-block align-center p-5 fz-12">Jenis BBM</span>
+                    <div class="bbm-type flex-center gap-10 mt-1 align-center">
+                        <div class="bbm-btn p-10 pointer br-default"><input class="dis-none" type="radio" name="bbm-type" id="dexlite"><label class="pointer" for="dexlite">Dexlite</label></div>
+                        <div class="bbm-btn p-10 pointer br-default"><input class="dis-none" type="radio" name="bbm-type" id="pertamax"><label class="pointer" for="pertamax">Pertamax</label></div>
+                    </div>
+                    <div class="hr default p-0 mt-1 mb-1"></div>
+                    <span class="dis-block align-center p-5 fz-12">Jumlah liter</span>
+                    <div class="liter-chose flex-center gap-15 clr-default">
+                        <span class="liter-number">3</span>
+                        <span class="liter-number">6</span>|
+                        <span class="liter-number">20</span>|
+                        <span class="liter-number">11</span>
+                        <span class="liter-number">22</span>
+                    </div>
                     
-                    <span class="liter-error fz-10 w-100 mt-1 dis-block align-center" id="liter-error">Masukan jumlah liter.</span>
+                    <div class="hr default p-0 mt-1 mb-2"></div>
+                    <span class="liter-error fz-10 w-100 mt-1  dis-block align-center" id="liter-error">Pilih type dan jumlah.</span>
                     <div class="submit default p-10 w-50 m-auto align-center borad-5 pointer mt-1 bolder uppercase" id="submit"><i class="fas fa-save br-none"></i> Submit</div>
                 </div>
                 <div class="form-liter relative white p-10 borad-10 dis-none" id="success">

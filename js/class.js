@@ -498,6 +498,11 @@ class dataCtrl {
     bindElements() {
         this.formGroups     = document.querySelectorAll('.confirm-group');
         this.liters         = document.querySelectorAll(".form-liter");
+        this.fuels          = [
+            { type: 'pertamax', elm: document.querySelector("#pertamax") },
+            { type: 'dexlite', elm: document.querySelector("#dexlite") }
+        ];
+        this.liters         = document.querySelectorAll("span.liter-number");
         this.lanjutkan      = document.querySelector('#lanjutkan');
         this.afterBox       = document.querySelector('#after-box');
         this.formLiter      = document.querySelector('#form-liter');
@@ -523,7 +528,21 @@ class dataCtrl {
         this.notif          = document.querySelector(".data-notif")
     }
     init() {
-        //document.querySelector(".liters").onclick = () => this.liter.focus();
+        document.querySelectorAll(".bbm-btn").forEach(btn => {
+            btn.onclick = () => {
+                btn.querySelector("input").click()
+                console.log("tes click")
+                document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
+                btn.classList.add("on")
+            };
+        })
+        
+        document.querySelectorAll("span.liter-number").forEach(span => {
+            span.onclick = () => {
+                document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
+                span.classList.add("on")
+            }
+        })
 
         this.formGroups.forEach(form => {
             const sx = form.querySelector('.sx');
@@ -548,6 +567,27 @@ class dataCtrl {
         this.report.addEventListener("click", () => this.sendReport());
     }
     handleLiterInput() {
+        let typeParam   = false,
+            typeValue   = null,
+            literParam  = false,
+            literValue  = null
+            
+        this.fuels.forEach(type => {
+            if(!type.elm.checked) return
+            typeParam = true
+            typeValue = type.type
+        })
+
+        this.liters.forEach(liter => {
+            if(!liter.classList.contains("on")) return
+            literParam = true
+            literValue = liter.textContent
+        })
+
+
+
+
+        return
         if (this.liter.value == 0) this.liter.value = "";
         if (this.liter.value === "") {
             this.literError.textContent = "Masukan angka.";
@@ -996,7 +1036,22 @@ class ImageCaptureManager {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  //window.imageManager = new ImageCaptureManager();
+    /*/window.imageManager = new ImageCaptureManager();
+    
+    document.querySelectorAll(".bbm-btn").forEach(btn => {
+        btn.onclick = () => {
+            btn.querySelector("input").click()
+            console.log("tes click")
+            document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
+            btn.classList.add("on")
+        };
+    })
+    document.querySelectorAll("span.liter-number").forEach(span => {
+        span.onclick = () => {
+            document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
+            span.classList.add("on")
+        }
+    }) */
 });
 
 
