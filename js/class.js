@@ -730,6 +730,8 @@ class dataCtrl {
         this.notif?.classList.add("dis-none");
         document.querySelectorAll(".form-liter").forEach(form => form.classList.add("dis-none"));
         //document.querySelector(formExcept)?.classList.remove("dis-none")
+        this.literx.forEach(span => span.classList.remove("on"))
+        this.fuels.forEach(type => type.elm.classList.remove("on"))
         this.formGroups?.forEach(group => {
             group.dataset.value = "";
             group.classList.remove("highlight");
@@ -1037,22 +1039,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }) */
 });
 
-
-
-document.querySelectorAll(".bbm-btn").forEach(btn => {
-    btn.onclick = () => {
-        console.log("tes click")
-        document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
-        btn.classList.add("on")
-    };
-})
-
-document.querySelectorAll("span.liter-number").forEach(span => {
-    span.onclick = () => {
-        document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
-        span.classList.add("on")
-    }
-})
 
 /*
 console.log(btoa(JSON.stringify({
