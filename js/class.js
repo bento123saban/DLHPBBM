@@ -123,6 +123,262 @@ class QRScanner {
         this.html5QrCode = new Html5Qrcode("reader");
         this.cameras = [];
         this.currentCamIndex = 0;
+        this._izinInterval = null;
+        this._eventsBound = false;
+        this.state = {
+            scanning: false,
+            busy: false,
+            transitioning: false,
+            stopping: false,
+            switchingCamera: false,
+            lastScan: { text: null, time: 0 },
+            permission: null
+        };
+        this.dom = {
+            toggleBtn: document.getElementById("toggle-btn"),
+            switchCameraBtn: document.getElementById("switch-camera"),
+            codeInputBtn: document.getElementById("code-input-btn"),
+            scanHeader: document.querySelector('#scan h4'),
+            scanText: document.querySelector('.scan-notif-text')
+        };
+        this.initGLFX();
+    }
+    async run() {
+        this.main.state = "Scan";
+        this.main.showPage("#scan");
+
+        await this.initCameras();
+        const ok = await this.permissions();
+        if (!ok) return;
+
+        this.bindEvents();
+        await this.startScanner();
+
+        if (this._izinInterval) clearInterval(this._izinInterval);
+        this._izinInterval = setInterval(async () => {
+            if (this.main.state !== "Scan") return;
+            const izin = await this.cekIzinKamera();
+            if (izin.state !== this.state.permission) {
+                this.state.permission = izin.state;
+                await this.permissions();
+            }
+        }, 1000);
+    }
+    async stop() {
+        await this.stopScanner();
+        if (this._izinInterval) {
+            clearInterval(this._izinInterval);
+            this._izinInterval = null;
+        }
+    }
+    async startScanner() {
+        if (this.state.scanning || this.state.transitioning || this.state.stopping) return;
+
+        if (this.cameras.length === 0) await this.initCameras();
+        if (this.cameras.length === 0) return;
+
+        this.state.transitioning = true;
+        this.state.scanning = true;
+        this.toggleScanUI(true);
+
+        const config = { fps: 60, qrbox: { width: 300, height: 500 } };
+        const onScanSuccess = async (decodedText) => {
+            const now = Date.now();
+            if (decodedText === this.state.lastScan.text && now - this.state.lastScan.time < 5000) return;
+
+            this.state.lastScan = { text: decodedText, time: now };
+            const checks = await this.encodeCheck(decodedText);
+            if (!checks.status) return;
+            await this.main.dataCtrl.run(checks.data);
+        };
+
+        try {
+            await this.html5QrCode.start(
+                { deviceId: { exact: this.cameras[this.currentCamIndex].id } },
+                config,
+                onScanSuccess
+            );
+        } catch {
+            try {
+                await this.safeStop();
+                this.html5QrCode = new Html5Qrcode("reader");
+                await this.html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+            } catch (fallbackErr) {
+                console.error("[QRScanner] Start gagal total:", fallbackErr);
+                this.state.scanning = false;
+                this.state.transitioning = false;
+            }
+        }
+
+        this.state.transitioning = false;
+    }
+    async stopScanner() {
+        if (!this.state.scanning || this.state.transitioning || this.state.stopping) return;
+
+        this.state.stopping = true;
+        this.state.scanning = false;
+        this.state.transitioning = true;
+
+        this.toggleScanUI(false);
+
+        try {
+            await this.html5QrCode.stop({ clearScanRegion: true });
+            await this.html5QrCode.clear();
+        } catch (err) {
+            console.warn("[QRScanner] Gagal stop:", err);
+        }
+
+        this.state.stopping = false;
+        this.state.transitioning = false;
+    }
+    async safeStop() {
+        if (this.state.scanning) {
+            try {
+                await this.stopScanner();
+            } catch (e) {
+                console.warn("[QRScanner] safeStop error:", e);
+            }
+        }
+    }
+    async initCameras() {
+        try {
+            this.cameras = await Html5Qrcode.getCameras();
+            if (this.dom.switchCameraBtn) {
+                if (this.cameras.length < 2) this.dom.switchCameraBtn.classList.add("dis-none");
+                else this.dom.switchCameraBtn.classList.remove("dis-none");
+            }
+        } catch (e) {
+            console.warn("[QRScanner] Init camera error:", e);
+        }
+    }
+    async permissions() {
+        const camStatus = await this.cekKameraTersedia();
+        const izinStatus = await this.cekIzinKamera();
+
+        const showErrorUI = (icon, title, message, status = false) => {
+            this.dom.scanHeader.innerHTML = `${icon} ${title}`;
+            this.dom.scanText.innerHTML = message;
+            this.dom.scanText.classList.toggle("dis-none", status);
+            this.dom.scanHeader.classList.toggle("red", !status);
+            this.dom.toggleBtn.classList.toggle("off", !status);
+            this.dom.switchCameraBtn.classList.toggle("off", !status);
+        };
+
+        if (!camStatus.status || !izinStatus.status) {
+            this.dom.toggleBtn.classList.add("dis-none");
+            this.dom.switchCameraBtn.classList.add("dis-none");
+            this.dom.codeInputBtn.classList.remove("dis-none", "opacity-0", "off");
+            this.dom.codeInputBtn.classList.add("center");
+        }
+
+        if (!camStatus.status) {
+            showErrorUI('<i class="fas fa-camera-slash"></i>', camStatus.msg, 'Gunakan perangkat dengan kamera atau input manual <i class="fas fa-code"></i>.');
+            return false;
+        }
+
+        if (!izinStatus.status) {
+            showErrorUI('<i class="fas fa-lock"></i>', 'Akses kamera ditolak', 'Ubah izin di pengaturan browser atau gunakan input manual <i class="fas fa-code"></i>.');
+            return false;
+        }
+
+        this.dom.codeInputBtn.classList.add("dis-none");
+        this.dom.codeInputBtn.classList.remove("center");
+        this.dom.toggleBtn.classList.remove("dis-none");
+        showErrorUI('', 'QRCode Scanner', '', true);
+        this.toggleScanUI(false);
+        return true;
+    }
+    async cekKameraTersedia() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasCamera = devices.some(device => device.kind === 'videoinput');
+            return hasCamera
+                ? { status: true, msg: 'Kamera tersedia' }
+                : { status: false, msg: 'Tidak ada kamera ditemukan' };
+        } catch (err) {
+            return { status: false, msg: 'Error deteksi kamera: ' + err.message };
+        }
+    }
+    async cekIzinKamera() {
+        try {
+            const status = await navigator.permissions.query({ name: 'camera' });
+            return {
+                status: status.state === "granted",
+                state: status.state,
+                msg: status.state
+            };
+        } catch {
+            return { status: false, state: "error", msg: "Gagal cek izin kamera" };
+        }
+    }
+    bindEvents() {
+        if (this._eventsBound) return;
+        this._eventsBound = true;
+
+        this.dom.toggleBtn?.addEventListener("click", async () => {
+            if (this.state.busy) return;
+            if (this.state.scanning) await this.stopScanner();
+            else await this.startScanner();
+        });
+
+        this.dom.switchCameraBtn?.addEventListener("click", async () => {
+            if (this.cameras.length < 2 || this.state.switchingCamera) return;
+
+            this.state.switchingCamera = true;
+            this.dom.switchCameraBtn.classList.add("off");
+
+            this.currentCamIndex = (this.currentCamIndex + 1) % this.cameras.length;
+
+            try {
+                if (this.state.scanning) {
+                    await this.stopScanner();
+                    await this.startScanner();
+                }
+            } catch (e) {
+                console.warn("[QRScanner] Switch error:", e);
+            }
+
+            this.dom.switchCameraBtn.classList.remove("off");
+            this.state.switchingCamera = false;
+        });
+
+        window.addEventListener("online", () => console.log("[QRScanner] ONLINE"));
+        window.addEventListener("offline", () => console.log("[QRScanner] OFFLINE"));
+    }
+    encodeCheck(base64Str) {
+        try {
+            const decodedStr = atob(base64Str);
+            const json = JSON.parse(decodedStr);
+            if (json.auth !== "DLHP" || typeof json.data !== "object") throw new Error("Format QR tidak valid");
+            return { status: true, data: json.data };
+        } catch (e) {
+            return { status: false, message: "Gagal decode: " + e.message };
+        }
+    }
+    toggleScanUI(isActive) {
+        this.dom.toggleBtn.classList.toggle("active", isActive);
+        this.dom.toggleBtn.innerHTML = isActive
+            ? '<i class="fas fa-qrcode"></i>'
+            : '<i class="clr-red bolder fas fa-x"></i>';
+    }
+    initGLFX() {
+        if (typeof fx !== 'undefined') {
+            this.fxCanvas = fx.canvas();
+        } else {
+            console.warn("WebGL FX not found. Enhancer mati.");
+        }
+    }
+}
+
+
+
+/*
+class QRScanner {
+    constructor(main) {
+        this.main = main;
+        this.html5QrCode = new Html5Qrcode("reader");
+        this.cameras = [];
+        this.currentCamIndex = 0;
         this.isScanning = false;
         this.isBusy = false;
         this.lastPermission = null;
@@ -377,6 +633,7 @@ class QRScanner {
         }
     }
 }
+*/
 
 class CodeHandler {
     constructor(main) {
