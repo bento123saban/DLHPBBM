@@ -492,7 +492,7 @@ class dataCtrl {
         console.log(this.TRXID)
         this.nameOutput.textContent     = data.NAMA
         this.nopolOutput.textContent    = data.NOPOL
-        this.nolamOutput.textContent    = data.NOLAMBUNG
+        this.nolamOutput.textContent    = data.NOLAMBUNG + "-" + data.CODE
         this.kendOutput.textContent     = data.KENDARAAN
         this.fotoOutput.src             = '/img/driver.jpeg'
     }
@@ -535,14 +535,12 @@ class dataCtrl {
                 btn.classList.add("on")
             };
         })
-        
         document.querySelectorAll("span.liter-number").forEach(span => {
             span.onclick = () => {
                 document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
                 span.classList.add("on")
             }
         })
-
         this.formGroups.forEach(form => {
             const sx = form.querySelector('.sx');
             const tx = form.querySelector('.tx');
@@ -550,16 +548,11 @@ class dataCtrl {
             sx.onclick = () => this.handleChoice(form, true, sx, tx);
             tx.onclick = () => this.handleChoice(form, false, sx, tx);
         });
-        
         this.lanjutkan.addEventListener("click", () => this.handleLanjutkan());
-        
         this.literClose.addEventListener("click", () => this.toggleLiterForm(false));
-        
         [this.submit, this.resent].forEach(btn => {
-            if(!this.handleLanjutkan()) return
             btn.addEventListener("click", () => this.handleSubmit(btn.id));
         });
-        
         this.toReport.addEventListener("click", () => this.showReportForm());
         this.report.addEventListener("click", () => this.sendReport());
     }
@@ -570,7 +563,7 @@ class dataCtrl {
             literValue  = null
             
         this.fuels.forEach(type => {
-            if(!type.elm.checked) return
+            if(!type.elm.classList.contains("on")) return
             typeParam = true
             typeValue = type.type
         })
@@ -597,10 +590,10 @@ class dataCtrl {
         */
     }
     handleSubmit(buttonId) {
-        console.log("liter", this.liter.value);
         if (buttonId == "resent") this.rx += 1;
         if (this.rx >= 1) this.toReport.classList.remove("dis-none");
         if (this.handleLiterInput() === "Bendhard16") {
+            console.log("RUN SUBMIT")
             this.addTrxData(this.getValue());
             this.literError.classList.remove("clr-red");
         } else {
