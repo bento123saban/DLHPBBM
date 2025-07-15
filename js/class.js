@@ -470,7 +470,8 @@ class dataCtrl {
             NAMA        : "-",
             NOPOL       : "-",
             NOLAMBUNG   : "-",
-            KENDARAAN   : "-"
+            KENDARAAN   : "-",
+            CODE        : "-"
         }
         this.TRXID      = ""
         this.rx         = 0;
@@ -691,6 +692,7 @@ class dataCtrl {
     getValue() {
         return [
             this.TRXID,
+            this.theData.NOPOL + "" + this.theData.CODE,
             this.getDateTime(), // col2
             (this.konfirmasi().countFalse.length >= 1) ? "false" : "true", // col3
             this.note(), // col4
@@ -708,8 +710,7 @@ class dataCtrl {
             "", // col16
             "", // col17
             "", // col18
-            "", // col19
-            ""  // col20
+            ""
             ];
     }
     konfirmasi() {
