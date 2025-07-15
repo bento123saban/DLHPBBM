@@ -370,271 +370,6 @@ class QRScanner {
     }
 }
 
-
-
-/*
-class QRScanner {
-    constructor(main) {
-        this.main = main;
-        this.html5QrCode = new Html5Qrcode("reader");
-        this.cameras = [];
-        this.currentCamIndex = 0;
-        this.isScanning = false;
-        this.isBusy = false;
-        this.lastPermission = null;
-        this.isSwitchingCamera = false;
-        this.isTransitioning = false;
-        this.isStopping = false;
-        this.lastScan = { text: null, time: 0 };
-        this._izinInterval = null;
-        this.initGLFX();
-    }
-
-    async run() {
-        this.main.state = "Scan";
-        this.main.showPage("#scan");
-
-        await this.initCameras();
-        const ok = await this.permissions();
-        if (!ok) return;
-
-        this.bindEvents();
-        await this.startScanner();
-
-        if (this._izinInterval) clearInterval(this._izinInterval);
-        this._izinInterval = setInterval(async () => {
-            if (this.main.state !== "Scan") return;
-            const izin = await this.cekIzinKamera();
-            if (izin.state !== this.lastPermission) {
-                this.lastPermission = izin.state;
-                await this.permissions();
-            }
-        }, 1000);
-    }
-
-    async stop() {
-        await this.stopScanner();
-        if (this._izinInterval) {
-            clearInterval(this._izinInterval);
-            this._izinInterval = null;
-        }
-    }
-
-    async startScanner() {
-        const toggleBtn = document.getElementById("toggle-btn");
-        toggleBtn.innerHTML = '<i class="clr-red bolder fas fa-x"></i>'
-        if (this.isScanning || this.isTransitioning || this.isStopping) return;
-
-        if (this.cameras.length === 0) await this.initCameras();
-        if (this.cameras.length === 0) return;
-
-        this.isTransitioning = true;
-        this.isScanning = true;
-        toggleBtn?.classList.add("active");
-
-        const config = { fps: 60, qrbox: { width: 300, height: 500 } };
-
-        const onScanSuccess = async (decodedText, result) => {
-            const now = Date.now();
-            if (decodedText === this.lastScan.text && now - this.lastScan.time < 5000) {
-                console.log("[QRScanner] Duplikat QR, abaikan.");
-                return;
-            }
-            this.lastScan = { text: decodedText, time: now };
-            const checks = await this.encodeCheck(decodedText);
-            if (!checks.status) return;
-            await this.main.dataCtrl.run(checks.data);
-        };
-
-        try {
-            await this.html5QrCode.start(
-                { deviceId: { exact: this.cameras[this.currentCamIndex].id } },
-                config,
-                onScanSuccess
-            );
-        } catch (err) {
-            try {
-                await this.safeStop();
-                this.html5QrCode = new Html5Qrcode("reader");
-                await this.html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-            } catch (fallbackErr) {
-                console.error("[QRScanner] Start gagal total:", fallbackErr);
-                this.isScanning = false;
-                this.isTransitioning = false;
-            }
-        }
-
-        this.isTransitioning = false;
-    }
-
-    async stopScanner() {
-        document.querySelector('#toggle-btn').innerHTML = '<i class="fas fa-qrcode"></i>'
-        if (!this.isScanning || this.isTransitioning || this.isStopping) return;
-        this.isStopping = true;
-        this.isScanning = false;
-        this.isTransitioning = true;
-        document.getElementById("toggle-btn")?.classList.remove("active");
-
-        try {
-            await this.html5QrCode.stop({ clearScanRegion: true });
-            await this.html5QrCode.clear();
-        } catch (err) {
-            console.warn("[QRScanner] Gagal stop:", err);
-        }
-
-        this.isStopping = false;
-        this.isTransitioning = false;
-    }
-
-    async safeStop() {
-        if (this.isScanning) {
-            try {
-                await this.stopScanner();
-            } catch (e) {
-                console.warn("[QRScanner] safeStop error:", e);
-            }
-        }
-    }
-
-    async initCameras() {
-        try {
-            this.cameras = await Html5Qrcode.getCameras();
-            const switchBtn = document.getElementById("switch-camera");
-            if (switchBtn) {
-                console.log('camsLenth : ' + this.cameras.length)
-                if (this.cameras.length < 2) switchBtn.classList.add("dis-none");
-                else switchBtn.classList.remove("dis-none");
-            }
-        } catch (e) {
-            console.warn("[QRScanner] Init camera error:", e);
-        }
-    }
-
-    async permissions() {
-        const camStatus = await this.cekKameraTersedia();
-        const izinStatus = await this.cekIzinKamera();
-
-        const scanHeader = document.querySelector('#scan h4');
-        const scanText = document.querySelector('.scan-notif-text');
-        const toggleBtn = document.querySelector('#toggle-btn');
-        const switchCams = document.querySelector('#switch-camera');
-        const codeInput = document.querySelector('#code-input-btn');
-
-        const showErrorUI = (icon, title, message, status = false) => {
-            scanHeader.innerHTML = `${icon} ${title}`;
-            scanText.innerHTML = message;
-            scanText.classList.toggle("dis-none", status);
-            scanHeader.classList.toggle("red", !status);
-            toggleBtn.classList.toggle("off", !status);
-            switchCams.classList.toggle("off", !status);
-        };
-
-        if(!camStatus.status || !izinStatus.status) {
-            toggleBtn.classList.add("dis-none")
-            switchCams.classList.add("dis-none")
-            codeInput.classList.remove("dis-none")
-            codeInput.classList.add("center")
-        }
-
-        if (!camStatus.status) {
-            showErrorUI('<i class="fas fa-camera-slash"></i> &nbsp;', camStatus.msg, 'Gunakan perangkat dengan kamera atau input manual &nbsp; <i class="fas fa-code"></i>.');
-            codeInput.classList.add("opacity-0", "off");
-            return false;
-        }
-
-        if (!izinStatus.status) {
-            showErrorUI('<i class="fas fa-lock"></i>  &nbsp;', 'Akses kamera ditolak', 'Ubah izin di pengaturan browser atau gunakan input manual &nbsp; <i class="fas fa-code"></i>.');
-            return false;
-        }
-
-        showErrorUI('', 'QRCode Scanner', '', true);
-        document.querySelector('#toggle-btn').innerHTML = '<i class="fas fa-qrcode"></i>'
-        toggleBtn.classList.remove("dis-none")
-        codeInput.classList.add("dis-none")
-        codeInput.classList.remove("center")
-        return true;
-    }
-
-    async cekKameraTersedia() {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const hasCamera = devices.some(device => device.kind === 'videoinput');
-            return hasCamera
-                ? { status: true, msg: 'Kamera tersedia' }
-                : { status: false, msg: 'Tidak ada kamera ditemukan' };
-        } catch (err) {
-            return { status: false, msg: 'Error deteksi kamera: ' + err.message };
-        }
-    }
-
-    async cekIzinKamera() {
-        try {
-            const status = await navigator.permissions.query({ name: 'camera' });
-            return {
-                status: status.state === "granted",
-                state: status.state,
-                msg: status.state
-            };
-        } catch (err) {
-            return { status: false, state: "error", msg: "Gagal cek izin kamera" };
-        }
-    }
-
-    bindEvents() {
-        document.getElementById("toggle-btn")?.addEventListener("click", async () => {
-            if (this.isBusy) return;
-            if (this.isScanning) await this.stopScanner();
-            else await this.startScanner();
-        });
-
-        document.getElementById("switch-camera")?.addEventListener("click", async () => {
-            if (this.cameras.length < 2) return;
-            if (this.isSwitchingCamera) return;
-
-            const btn = document.getElementById("switch-camera");
-            this.isSwitchingCamera = true;
-            btn?.classList.add("off");
-
-            this.currentCamIndex = (this.currentCamIndex + 1) % this.cameras.length;
-
-            try {
-                if (this.isScanning) {
-                    await this.stopScanner();
-                    await this.startScanner();
-                }
-            } catch (e) {
-                console.warn("[QRScanner] Switch error:", e);
-            }
-
-            btn?.classList.remove("off");
-            this.isSwitchingCamera = false;
-        });
-
-        window.addEventListener("online", () => console.log("[QRScanner] ONLINE"));
-        window.addEventListener("offline", () => console.log("[QRScanner] OFFLINE"));
-    }
-
-    encodeCheck(base64Str) {
-        try {
-            const decodedStr = atob(base64Str);
-            const json = JSON.parse(decodedStr);
-            if (json.auth !== "DLHP" || typeof json.data !== "object") throw new Error("Format QR tidak valid");
-            return { status: true, data: json.data };
-        } catch (e) {
-            return { status: false, message: "Gagal decode: " + e.message };
-        }
-    }
-
-    initGLFX() {
-        if (typeof fx !== 'undefined') {
-            this.fxCanvas = fx.canvas();
-        } else {
-            console.warn("WebGL FX not found. Enhancer mati.");
-        }
-    }
-}
-*/
-
 class CodeHandler {
     constructor(main) {
         this.main       = main;
@@ -721,144 +456,142 @@ class CodeHandler {
 }
 
 class dataCtrl {
-    constructor (main) {
-        this.main       = main
-        this.theData    = {
-            NAMA        : "-",
-            NOPOL       : "-",
-            NOLAMBUNG   : "-",
-            KENDARAAN   : "-",
-            CODE        : "-"
-        }
-        this.TRXID      = ""
-        this.rx         = 0;
+    constructor(main) {
+        this.main = main;
+        this.theData = {
+            NAMA: "-", NOPOL: "-", NOLAMBUNG: "-", KENDARAAN: "-", CODE: "-"
+        };
+        this.TRXID = "";
+        this.rx = 0;
     }
-    run (data) {
-        console.log("Init DATA")
-        this.main.toggleLoader(true, "Processing data")
-        this.theData = data
-        this.bindElements()
-        this.writeData()
-        this.init()
+
+    run(data) {
+        console.log("Init DATA");
+        this.main.toggleLoader(true, "Processing data");
+        this.theData = data;
+        this.bindElements();
+        this.writeData();
+        this.init();
         setTimeout(() => this.main.showPage("#data"), 2500);
-        console.log(this.theData, data)
     }
-    writeData() {
-        const data = this.theData
-        this.TRXID = Date.now()
-        console.log(this.TRXID)
-        this.nameOutput.textContent     = data.NAMA
-        this.nopolOutput.textContent    = data.NOPOL
-        this.nolamOutput.textContent    = data.NOLAMBUNG + "-" + data.CODE
-        this.kendOutput.textContent     = data.KENDARAAN
-        this.fotoOutput.src             = '/img/driver.jpeg'
-    }
+
     bindElements() {
-        this.formGroups     = document.querySelectorAll('.confirm-group');
-        this.liters         = document.querySelectorAll(".form-liter");
-        this.fuels          = [
+        this.formGroups = document.querySelectorAll('.confirm-group');
+        this.liters = document.querySelectorAll(".form-liter");
+        this.literx = document.querySelectorAll("span.liter-number");
+        this.fuels = [
             { type: 'pertamax', elm: document.querySelector("#pertamax") },
             { type: 'dexlite', elm: document.querySelector("#dexlite") }
         ];
-        this.literx         = document.querySelectorAll("span.liter-number");
-        this.lanjutkan      = document.querySelector('#lanjutkan');
-        this.afterBox       = document.querySelector('#after-box');
-        this.formLiter      = document.querySelector('#form-liter');
-        this.literClose     = document.querySelector('#liter-close');
-        this.liter          = document.querySelector('#liter');
-        this.literError     = document.querySelector("#liter-error");
-        this.submit         = document.querySelector("#submit");
-        this.resent         = document.querySelector("#resent");
-        this.lanjutkanText  = document.querySelector("#lanjutkan-text");
-        this.loaderBox      = document.querySelector(".loader-box");
-        this.loaderText     = document.querySelector(".loader-text");
-        this.success        = document.querySelector("#success");
-        this.failed         = document.querySelector("#failed");
-        this.toReport       = document.querySelector("#to-report");
-        this.formReport     = document.querySelector("#form-report");
-        this.report         = document.querySelector("#report");
-        this.reportNote     = document.querySelector("#report-input");
-        this.fotoOutput     = document.querySelector("#foto-output")
-        this.nameOutput     = document.querySelector("#name-output")
-        this.nopolOutput    = document.querySelector("#nopol-output")
-        this.nolamOutput    = document.querySelector("#nolambung-output")
-        this.kendOutput     = document.querySelector("#kendaraan-output")
-        this.notif          = document.querySelector(".data-notif")
+
+        this.lanjutkan = document.querySelector('#lanjutkan');
+        this.lanjutkanText = document.querySelector('#lanjutkan-text');
+        this.formLiter = document.querySelector('#form-liter');
+        this.literClose = document.querySelector('#liter-close');
+        this.literError = document.querySelector("#liter-error");
+        this.liter = document.querySelector("#liter");
+
+        this.submit = document.querySelector("#submit");
+        this.resent = document.querySelector("#resent");
+        this.toReport = document.querySelector("#to-report");
+        this.formReport = document.querySelector("#form-report");
+        this.report = document.querySelector("#report");
+        this.reportNote = document.querySelector("#report-input");
+        this.afterBox = document.querySelector('#after-box');
+
+        this.fotoOutput = document.querySelector("#foto-output");
+        this.nameOutput = document.querySelector("#name-output");
+        this.nopolOutput = document.querySelector("#nopol-output");
+        this.nolamOutput = document.querySelector("#nolambung-output");
+        this.kendOutput = document.querySelector("#kendaraan-output");
+        this.notif = document.querySelector(".data-notif");
+
+        this.success = document.querySelector("#success");
+        this.failed = document.querySelector("#failed");
+        this.loaderBox = document.querySelector(".loader-box");
+        this.loaderText = document.querySelector(".loader-text");
     }
+
+    writeData() {
+        const d = this.theData;
+        this.TRXID = Date.now();
+        this.nameOutput.textContent = d.NAMA;
+        this.nopolOutput.textContent = d.NOPOL;
+        this.nolamOutput.textContent = `${d.NOLAMBUNG}-${d.CODE}`;
+        this.kendOutput.textContent = d.KENDARAAN;
+        this.fotoOutput.src = '/img/driver.jpeg';
+    }
+
     init() {
         document.querySelectorAll(".bbm-btn").forEach(btn => {
             btn.onclick = () => {
-                document.querySelectorAll(".bbm-btn").forEach(btx => btx.classList.remove("on"))
-                btn.classList.add("on")
+                document.querySelectorAll(".bbm-btn").forEach(b => b.classList.remove("on"));
+                btn.classList.add("on");
             };
-        })
-        document.querySelectorAll("span.liter-number").forEach(span => {
+        });
+
+        this.literx.forEach(span => {
             span.onclick = () => {
-                document.querySelectorAll("span.liter-number").forEach(spx => spx.classList.remove("on"))
-                span.classList.add("on")
-            }
-        })
+                this.literx.forEach(s => s.classList.remove("on"));
+                span.classList.add("on");
+            };
+        });
+
         this.formGroups.forEach(form => {
             const sx = form.querySelector('.sx');
             const tx = form.querySelector('.tx');
-
             sx.onclick = () => this.handleChoice(form, true, sx, tx);
             tx.onclick = () => this.handleChoice(form, false, sx, tx);
         });
+
         this.lanjutkan.addEventListener("click", () => this.handleLanjutkan());
         this.literClose.addEventListener("click", () => this.toggleLiterForm(false));
-        [this.submit, this.resent].forEach(btn => {
-            btn.addEventListener("click", () => this.handleSubmit(btn.id));
-        });
+        this.submit.addEventListener("click", () => this.handleSubmit("submit"));
+        this.resent.addEventListener("click", () => this.handleSubmit("resent"));
         this.toReport.addEventListener("click", () => this.showReportForm());
         this.report.addEventListener("click", () => this.sendReport());
     }
-    handleLiterInput() {
-        let typeParam   = false,
-            typeValue   = null,
-            literParam  = false,
-            literValue  = null
-            
-        this.fuels.forEach(type => {
-            if(!type.elm.classList.contains("on")) return
-            typeParam = true
-            typeValue = type.type
-        })
 
-        this.literx.forEach(liter => {
-            if(!liter.classList.contains("on")) return
-            literParam = true
-            literValue = liter.textContent
-        })
-        
-        this.literError.textContent = "";
-        if (typeParam && literParam) {
-            
-            this.literError.classList.remove("clr-red");
-            this.literError.classList.add("dis-none");
-            this.literError.textContent = "";
-            return {
-                confirm : "Bendhard16",
-                type    : typeValue,
-                liter   : literValue
+    handleLiterInput() {
+        let type = null, liter = null;
+
+        for (const fuel of this.fuels) {
+            if (fuel.elm.classList.contains("on")) {
+                type = fuel.type;
+                break;
             }
         }
-        console.log("TRUE")
-        if (!typeParam || !typeValue) this.literError.innerHTML = "Pilih jenis BBM. ";
-        if (!literParam || !literValue) this.literError.innerHTML += "Pilih jumlah liter.";
+
+        for (const l of this.literx) {
+            if (l.classList.contains("on")) {
+                liter = l.textContent;
+                break;
+            }
+        }
+
+        if (type && liter) {
+            this.literError.classList.add("dis-none");
+            return { confirm: "Bendhard16", type, liter };
+        }
+
+        this.literError.classList.remove("dis-none");
         this.literError.classList.add("clr-red");
-        return {confirm : false}
+        this.literError.innerHTML = (!type ? "Pilih jenis BBM. " : "") + (!liter ? "Pilih jumlah liter." : "");
+        return { confirm: false };
     }
+
     handleSubmit(buttonId) {
-        if (buttonId == "resent") this.rx += 1;
+        if (buttonId === "resent") this.rx++;
         if (this.rx >= 1) this.toReport.classList.remove("dis-none");
-        if (!this.handleLiterInput().confirm) return console.log("X")
+        if (!this.handleLiterInput().confirm) return;
         this.addTrxData(this.getValue());
     }
+
     toggleLiterForm(show) {
-        this.notif.classList.toggle('dis-none', !show);
         this.formLiter.classList.toggle('dis-none', !show);
+        this.notif.classList.toggle('dis-none', !show);
     }
+
     handleChoice(form, isTrue, sx, tx) {
         form.dataset.value = isTrue ? "true" : "false";
         sx.parentElement.classList.remove("highlight");
@@ -879,8 +612,9 @@ class dataCtrl {
 
         this.updateLanjutkanState();
     }
+
     updateLanjutkanState() {
-        let allSelected = Array.from(this.formGroups).every(group => group.dataset.value !== "");
+        const allSelected = Array.from(this.formGroups).every(group => group.dataset.value !== "");
         if (allSelected) {
             this.lanjutkan.classList.remove("cancel");
             this.lanjutkanText.classList.add("dis-none");
@@ -889,6 +623,7 @@ class dataCtrl {
             this.lanjutkanText.classList.remove("dis-none");
         }
     }
+
     handleLanjutkan() {
         if (this.lanjutkan.classList.contains("cancel")) {
             this.formGroups.forEach(group => {
@@ -897,24 +632,20 @@ class dataCtrl {
             this.lanjutkanText.classList.add("active");
             this.lanjutkanText.textContent = "Pastikan semua pilihan terpilih";
         } else {
-            this.formLiter.classList.remove('dis-none');
-            this.notif.classList.remove("dis-none")
+            this.toggleLiterForm(true);
         }
     }
-    toggleLiterForm(show) {
-        this.formLiter.classList.toggle('dis-none', !show)
-        this.notif.classList.toggle('dis-none', !show)
-    }
+
     showReportForm() {
-        this.liters.forEach(literx => literx.classList.add("dis-none"));
+        this.liters.forEach(l => l.classList.add("dis-none"));
         this.formReport.classList.remove("dis-none");
     }
+
     async sendReport() {
         if (this.reportNote.value === "") return;
+        this.main.toggleLoader(true, "Sent report");
 
-        this.main.toggleLoader(true, "Sent report")
-
-        const formated = this.getDateTime();
+        const time = this.getDateTime();
         await fetch("https://api.fonnte.com/send", {
             method: "POST",
             headers: {
@@ -923,34 +654,38 @@ class dataCtrl {
             },
             body: JSON.stringify({
                 target: "081354741823",
-                message: `Error report : ${formated}\n${this.theData.nolambung} : ${this.reportNote.value}`,
+                message: `Error report : ${time}\n${this.theData.nolambung} : ${this.reportNote.value}`,
                 typing: true
             })
         });
-        this.afterRespon("#report-done")
+
+        this.afterRespon("#report-done");
     }
+
     getDateTime() {
-        const pad = n => n.toString().padStart(2, '0');
+        const p = n => n.toString().padStart(2, '0');
         const now = new Date();
-        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
     }
+
     getValue() {
         return [
             this.TRXID,
-            this.theData.NOLAMBUNG + "-" + this.theData.CODE,
-            this.getDateTime(), // col2
-            (this.konfirmasi().countFalse.length >= 1) ? "false" : "true", // col3
-            this.note(), // col4
-            document.querySelector("#foto").dataset.value, // col5
-            document.querySelector("#nama").dataset.value + " - " + this.theData.NAMA, // col6
-            document.querySelector("#nopol").dataset.value + " - " + this.theData.NOPOL, // col7
-            document.querySelector("#nolambung").dataset.value + " - " + this.theData.NOLAMBUNG + "-" + this.theData.CODE, // col8
-            document.querySelector("#kendaraan").dataset.value + " - " + this.theData.KENDARAAN, // col9
+            `${this.theData.NOLAMBUNG}-${this.theData.CODE}`,
+            this.getDateTime(),
+            this.konfirmasi().countFalse.length >= 1 ? "false" : "true",
+            this.note(),
+            document.querySelector("#foto").dataset.value,
+            document.querySelector("#nama").dataset.value + " - " + this.theData.NAMA,
+            document.querySelector("#nopol").dataset.value + " - " + this.theData.NOPOL,
+            document.querySelector("#nolambung").dataset.value + " - " + `${this.theData.NOLAMBUNG}-${this.theData.CODE}`,
+            document.querySelector("#kendaraan").dataset.value + " - " + this.theData.KENDARAAN,
             this.handleLiterInput().liter,
-            this.handleLiterInput().type,            
-            "loc: unknown", // col11
-            ];
+            this.handleLiterInput().type,
+            "loc: unknown"
+        ];
     }
+
     konfirmasi() {
         let countFalse = [], countTrue = [];
         this.formGroups.forEach(group => {
@@ -959,73 +694,64 @@ class dataCtrl {
         });
         return { countFalse, countTrue };
     }
+
     note() {
         const { countFalse, countTrue } = this.konfirmasi();
         if (countFalse.length === 0) return "All true";
         if (countTrue.length === 0) return "All false";
+        return `${countTrue.length} True (${countTrue.join(', ')}) - ${countFalse.length} False (${countFalse.join(', ')})`;
+    }
 
-        const falseText = countFalse.join(', ');
-        const trueText = countTrue.join(', ');
-        return `${countTrue.length} True (${trueText}) - ${countFalse.length} False (${falseText})`;
-    }
     async addTrxData(data) {
-        this.main.toggleLoader(true, "Sending request")
-        this.liters.forEach(literx => literx.classList.add("dis-none"));
-        let json = await this.main.post({
-                type: "addData",
-                data: data
-            });
-        
-        console.log(json)
-        if (!json) return this.afterRespon("#failed", "Request undefined")
-        if(!json.confirm) return this.afterRespon("#failed", json.msg);
-        this.afterRespon("#success", json.msg)
+        this.main.toggleLoader(true, "Sending request");
+        this.liters.forEach(l => l.classList.add("dis-none"));
+
+        const json = await this.main.post({ type: "addData", data });
+        if (!json) return this.afterRespon("#failed", "Request undefined");
+        if (!json.confirm) return this.afterRespon("#failed", json.msg);
+        this.afterRespon("#success", json.msg);
     }
-    clearFormData(formExcept= "") {
+
+    clearFormData() {
         if (this.liter) this.liter.value = "";
         this.toReport?.classList.add("dis-none");
         this.notif?.classList.add("dis-none");
-        document.querySelectorAll(".form-liter").forEach(form => form.classList.add("dis-none"));
-        //document.querySelector(formExcept)?.classList.remove("dis-none")
-        this.literx.forEach(span => span.classList.remove("on"))
-        this.fuels.forEach(type => type.elm.classList.remove("on"))
+
+        document.querySelectorAll(".form-liter").forEach(f => f.classList.add("dis-none"));
+        this.literx.forEach(span => span.classList.remove("on"));
+        this.fuels.forEach(f => f.elm.classList.remove("on"));
+
         this.formGroups?.forEach(group => {
             group.dataset.value = "";
             group.classList.remove("highlight");
             group.querySelectorAll("i, .sx, .tx").forEach(el => {
-            el.classList.remove(
-                "active", "inactive",
-                "clr-green", "br-green",
-                "clr-blue", "br-blue",
-                "clr-red", "br-red",
-                "clr-orange", "br-orange"
-            );
+                el.classList.remove("active", "inactive", "clr-green", "br-green", "clr-blue", "br-blue", "clr-red", "br-red", "clr-orange", "br-orange");
             });
         });
+
         this.lanjutkan?.classList.add("cancel");
         this.lanjutkanText?.classList.remove("dis-none");
     }
+
     afterRespon(selector, text = "") {
-        const elm   = document.querySelector(selector),
-            span    = elm.querySelector("span");
-        span.textContent = (text.length >= 1) ? text : span.textContent
+        const elm = document.querySelector(selector);
+        const span = elm.querySelector("span");
+        if (text.length) span.textContent = text;
+
         elm.classList.remove("dis-none");
-        console.log("BEn")
-        this.main.toggleLoader(false)
+        this.main.toggleLoader(false);
+
         if (selector === "#success" || selector === "#report-done") {
             this.formReport.classList.add("dis-none");
 
-            // Teks notifikasi
             const spanText = (selector === "#success")
                 ? `Data dengan ID <b>${this.theData.NOLAMBUNG.toUpperCase()}</b> berhasil disimpan`
                 : "Terima kasih untuk feedbacknya. <br> Report anda akan segera kami proses.";
             elm.querySelector("span").innerHTML = spanText;
 
-            // Setup tombol ulang
             const scanLagi = elm.querySelector(".scan-lagi");
             const codeLagi = elm.querySelector(".code-lagi");
-            const elx = (this.main.state === "Scan") ? scanLagi :
-                        (this.main.state === "Code") ? codeLagi : scanLagi;
+            const elx = (this.main.state === "Scan") ? scanLagi : codeLagi;
 
             let counter = 9;
             const icon = (this.main.state === "Scan") ? "qr" : "";
@@ -1033,8 +759,7 @@ class dataCtrl {
             elx.classList.remove("grey");
             elx.classList.add("green");
 
-            // Auto countdown + click
-            let itv = setInterval(() => {
+            const itv = setInterval(() => {
                 elx.innerHTML = `<i class="fas fa-${icon}code br-none"></i> &nbsp; ${this.main.state} (${counter})`;
                 if (--counter < 0) {
                     clearInterval(itv);
@@ -1043,19 +768,19 @@ class dataCtrl {
                 }
             }, 1000);
 
-            // Biar aman dari click berkali-kali
-            const stopCountdown = () => {
+            const stop = () => {
                 clearInterval(itv);
                 this.clearFormData();
-                scanLagi.removeEventListener("click", stopCountdown);
-                codeLagi.removeEventListener("click", stopCountdown);
+                scanLagi.removeEventListener("click", stop);
+                codeLagi.removeEventListener("click", stop);
             };
 
-            scanLagi.addEventListener("click", stopCountdown);
-            codeLagi.addEventListener("click", stopCountdown);
+            scanLagi.addEventListener("click", stop);
+            codeLagi.addEventListener("click", stop);
         }
     }
 }
+
 
 class ImageCaptureManager {
     constructor() {
