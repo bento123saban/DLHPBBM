@@ -781,20 +781,19 @@ class dataCtrl {
     }
 }
 
-
 class ImageCaptureManager {
     constructor() {
-        this.video      = document.getElementById("video");
-        this.captureBtn = document.getElementById("img-capture");
-        this.countBtn   = document.getElementById("img-count");
-        this.switchBtn  = document.getElementById("img-cams");
-        this.preview    = document.getElementById("the-preview");
-        this.previewBox = document.getElementById("img-preview-box");
-        this.slideBox   = document.getElementById("img-preview-slide");
-        this.clearBtn   = document.getElementById("clear-all");
-        this.uploadBtn  = document.getElementById("upload-all");
-        this.msgEl      = document.getElementById("img-cam-msg");
-        this.prevClose  = document.getElementById("preview-close");
+        this.video       = document.getElementById("video");
+        this.captureBtn  = document.getElementById("img-capture");
+        this.countBtn    = document.getElementById("img-count");
+        this.switchBtn   = document.getElementById("img-cams");
+        this.preview     = document.getElementById("the-preview");
+        this.previewBox  = document.getElementById("img-preview-box");
+        this.slideBox    = document.getElementById("img-preview-slide");
+        this.clearBtn    = document.getElementById("clear-all");
+        this.uploadBtn   = document.getElementById("upload-all");
+        this.msgEl       = document.getElementById("img-cam-msg");
+        this.prevClose   = document.getElementById("preview-close");
 
         this.maxImages = 5;
         this.images = [];
@@ -803,15 +802,15 @@ class ImageCaptureManager {
         this.currentDeviceIndex = 0;
         this.stream = null;
 
-        this._init();
+        this.initCameraAndEvents();
     }
 
-    async _init() {
+    async initCameraAndEvents() {
         try {
             this.devices = (await navigator.mediaDevices.enumerateDevices())
-                .filter(device => device.kind === "videoinput");
+                .filter(d => d.kind === "videoinput");
 
-            if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan.");
+            if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan");
 
             await this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
 
@@ -819,188 +818,168 @@ class ImageCaptureManager {
             this.switchBtn.addEventListener("click", () => this._switchCamera());
             this.countBtn.addEventListener("click", () => this._handleCountBtn());
             this.clearBtn.addEventListener("click", () => this.clearAll());
-            this.prevClose.addEventListener("click", () => this._previeWClose());
+            this.prevClose.addEventListener("click", () => this._previewClose());
             this.uploadBtn.addEventListener("click", () => this._handleUpload());
 
-            document.addEventListener("visibilitychange", () =>
-                (document.hidden)
-                    ? this._stopCamera() : (this.previewBox.classList.contains("dis-none"))
-                    ? this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId) : ""
-            );
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    this._stopCamera();
+                } else if (this.previewBox.classList.contains("dis-none")) {
+                    this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
+                }
+            });
         } catch (err) {
-            this._showMessage("Kamera tidak tersedia");
+            this._showMessage("Kamera gagal dimuat");
             console.error(err);
         }
     }
 
-  async _startCamera(deviceId) {
-    try {
-      const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } }, audio: false }
-        : { video: true, audio: false };
+    async _startCamera(deviceId) {
+        try {
+            const constraints = deviceId
+                ? { video: { deviceId: { exact: deviceId } }, audio: false }
+                : { video: true, audio: false };
 
-      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-      this.video.srcObject = this.stream;
-
-    } catch (err) {
-        this._stopCamera();
-        console.error("Gagal memulai kamera:", err);
-
-        let message = "Kamera gagal dinyalakan";
-
-        if (err.name === "OverconstrainedError") {
-            message = "Kamera tidak ditemukan. Mencoba fallback...";
-            console.warn("Fallback ke kamera default");
+            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            this.video.srcObject = this.stream;
+        } catch (err) {
+            console.warn("Fallback ke kamera default...");
             try {
                 this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 this.video.srcObject = this.stream;
-                return;
             } catch (fallbackErr) {
                 console.error("Fallback gagal:", fallbackErr);
+                this._showMessage("Kamera tidak bisa dinyalakan");
             }
         }
+    }
 
-        if (err.name === "NotAllowedError") {
-            message = "Akses kamera ditolak. Harap izinkan dari browser.";
-        } else if (err.name === "NotFoundError") {
-            message = "Kamera tidak tersedia di perangkat ini.";
-        } else if (err.name === "NotReadableError") {
-            message = "Kamera sedang dipakai aplikasi lain.";
+    _stopCamera() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        this.video.srcObject = null;
+    }
+
+    _captureImage() {
+        if (this.images.length >= this.maxImages) {
+            this._showMessage(`Maksimal ${this.maxImages} gambar`);
+            return;
         }
 
-        this._showMessage(message);
-    }
-  }
+        const canvas = document.createElement("canvas");
+        canvas.width = this.video.videoWidth;
+        canvas.height = this.video.videoHeight;
 
-  _stopCamera() {
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
-      this.stream = null;
-    }
-    this.video.srcObject = null;
-  }
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(this.video, 0, 0);
 
-  _captureImage() {
-    if(this.images.length >= 1) this.countBtn.classList.remove("opacity-0", "off");
-    else this.countBtn.classList.add("opacity-0", "off");
-    if (this.images.length >= this.maxImages) {
-      this._showMessage(`Maksimal ${this.maxImages} gambar`);
-      return;
-    }
+        const imgData = canvas.toDataURL("image/webp");
+        this.images.push(imgData);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = this.video.videoWidth;
-    canvas.height = this.video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(this.video, 0, 0);
-
-    const imgData = canvas.toDataURL("image/webp");
-    this.images.push(imgData);
-
-    this._updatePreview();
-    this._updateCountBadge();
-  }
-
-  _updatePreview() {
-    if (!this.images.length) {
-      this.previewBox.classList.add("dis-none");
-      this.slideBox.innerHTML = "";
-      return;
-    }
-
-    this.slideBox.innerHTML = "";
-    this.images.forEach((src, i) => {
-      const img = document.createElement("img");
-      img.src = src;
-      img.className = "slide-img";
-      img.alt = `Gambar ${i+1}`;
-
-      const delBtn = document.createElement("button");
-      delBtn.innerHTML = "❌";
-      delBtn.className = "delete-btn";
-      delBtn.onclick = () => {
-        this.images.splice(i, 1);
         this._updatePreview();
         this._updateCountBadge();
-      };
-
-      const box = document.createElement("div");
-      box.className = "slide-box relative";
-      box.appendChild(img);
-      box.appendChild(delBtn);
-      this.slideBox.appendChild(box);
-    });
-  }
-
-  _previeWClose() {
-    this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
-    this.previewBox.classList.add("dis-none");
-  }
-
-  _updateCountBadge() {
-    const count = this.images.length;
-    this.countBtn.dataset.count = count || "";
-    if (count > 0) this.countBtn.classList.remove("opacity-0", "off");
-    else this.countBtn.classList.add("opacity-0", "off")
-  }
-
-  async _switchCamera() {
-    if (this.devices.length < 2) {
-      this._showMessage("Hanya 1 kamera tersedia");
-      return;
     }
 
-    this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
-    const nextDeviceId = this.devices[this.currentDeviceIndex]?.deviceId;
+    _updatePreview() {
+        if (!this.images.length) {
+            this.previewBox.classList.add("dis-none");
+            this.slideBox.innerHTML = "";
+            return;
+        }
 
-    await this._startCamera(nextDeviceId);
-  }
+        this.slideBox.innerHTML = "";
+        this.images.forEach((src, i) => {
+            const img = document.createElement("img");
+            img.src = src;
+            img.className = "slide-img";
+            img.alt = `Gambar ${i + 1}`;
 
-  _handleCountBtn() {
-    if(this.countBtn.classList.contains("off")) return
-    if (!this.images.length) {
-      this._showMessage("Belum ada gambar");
-      return;
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "❌";
+            delBtn.className = "delete-btn";
+            delBtn.onclick = () => {
+                this.images.splice(i, 1);
+                this._updatePreview();
+                this._updateCountBadge();
+            };
+
+            const box = document.createElement("div");
+            box.className = "slide-box relative";
+            box.appendChild(img);
+            box.appendChild(delBtn);
+            this.slideBox.appendChild(box);
+        });
     }
 
-    this._stopCamera();
-    this.preview.src = this.images[this.images.length - 1];
-    this.previewBox.classList.remove("dis-none");
-  }
-
-  _showMessage(text, duration = 10000) {
-    this.msgEl.textContent = text;
-    this.msgEl.classList.remove("dis-none");
-
-    clearTimeout(this._msgTimeout);
-    this._msgTimeout = setTimeout(() => {
-      this.msgEl.classList.add("dis-none");
-    }, duration);
-  }
-
-  _handleUpload() {
-    if (!this.images.length) {
-      this._showMessage("Tidak ada gambar untuk diupload");
-      return;
+    _previewClose() {
+        this.previewBox.classList.add("dis-none");
+        this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId); // ⬅️ Start lagi
     }
 
-    this._showMessage("Upload belum diimplementasi");
-  }
+    _updateCountBadge() {
+        const count = this.images.length;
+        this.countBtn.dataset.count = count || "";
+        this.countBtn.classList.toggle("opacity-0", !count);
+        this.countBtn.classList.toggle("off", !count);
+    }
 
-  getCapturedImages() {
-    return this.images;
-  }
+    async _switchCamera() {
+        if (this.devices.length < 2) {
+            this._showMessage("Hanya 1 kamera tersedia");
+            return;
+        }
 
-  clearAll() {
-    this.countBtn.classList.add("opacity-0")
-    this.countBtn.classList.add("off")
-    this.images = [];
-    this._updatePreview();
-    this._updateCountBadge();
-    this._showMessage("Semua gambar dihapus");
-  }
+        this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
+        await this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
+    }
+
+    _handleCountBtn() {
+        if (!this.images.length) {
+            this._showMessage("Belum ada gambar");
+            return;
+        }
+
+        this._stopCamera();
+        this.preview.src = this.images[this.images.length - 1];
+        this.previewBox.classList.remove("dis-none");
+    }
+
+    _showMessage(text, duration = 7000) {
+        this.msgEl.textContent = text;
+        this.msgEl.classList.remove("dis-none");
+
+        clearTimeout(this._msgTimeout);
+        this._msgTimeout = setTimeout(() => {
+            this.msgEl.classList.add("dis-none");
+        }, duration);
+    }
+
+    _handleUpload() {
+        if (!this.images.length) {
+            this._showMessage("Tidak ada gambar untuk diupload");
+            return;
+        }
+
+        this._showMessage("Upload belum diimplementasi");
+    }
+
+    getCapturedImages() {
+        return this.images;
+    }
+
+    clearAll() {
+        this.images = [];
+        this._updatePreview();
+        this._updateCountBadge();
+        this._showMessage("Semua gambar dihapus");
+
+        this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId); // ⬅️ Start lagi
+    }
 }
+
+
 
 window.addEventListener("DOMContentLoaded", () => {
     /*/window.imageManager = new ImageCaptureManager();
@@ -1019,6 +998,7 @@ window.addEventListener("DOMContentLoaded", () => {
             span.classList.add("on")
         }
     }) */
+   //document.querySelector("#add-imgx").onclick = () => new ImageCaptureManager()
 });
 
 

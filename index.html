@@ -62,7 +62,7 @@
 
     <div id="content-box" class="relative hidden">
 
-        <div class="content absolute-top w-100 h-100 clr-white" id="home">
+        <div class="content absolute-top w-100 h-100 dis-none clr-white" id="home">
             
             <div class="blob-parent absolute-top">
                 <div class="magicpattern"></div>
@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <div class="content pt-5 relative scroll dis-none" id="data">
+        <div class="content pt-5 relative scroll" id="data">
             <div class="driver-basic p-10 clr-white">
                 <div class="driver-img">
                     <img id="foto-output" src="https://i.ibb.co/MTZBxqW/JMP.webp" alt="" />
@@ -237,7 +237,8 @@
                 <span class="dis-block fz-10 align-center" id="lanjutkan-text">Jika sudah semua data sudah dipilih, silahkan pilih lanjutkan.</span>
                 <span class="dis-block mt-1 w-100 blue p-10 fz-16 align-center borad-5 pointer cancel" id="lanjutkan">Lanjutkan</span>
             </div>
-            <div id="data-images" class="dis-none h-100 p-20 fixed-top-left grid-center">
+            <span class="pointer dis-none" id="add-imgx">add image</span>
+            <div id="data-images" class="relativeh-100 p-20 grid-center">
                 <div class="img-cam p-15 borad-10 default relative hidden" id="img-cam">
                 
                     <!-- Video Kamera -->
@@ -340,7 +341,8 @@
     <script src="/js/scanner.js"></script>
     <script src="/js/class.js"></script>
     <script>
-        new MainController().init()
+        //new MainController().init()
+        new ImageCaptureManager()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");
