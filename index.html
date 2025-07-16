@@ -246,9 +246,9 @@
 
                     <!-- Tombol Kontrol -->
                     <div class="img-cam-btn flex-evenly w-100 p-15">
-                        <button id="img-cams"><i class="fas fa-camera-rotate opacity-0 off pointer"></i></button>
+                        <button id="img-cams"><i class="fas fa-camera-rotate pointer"></i></button>
                         <button id="img-capture" class=" pointer"><i class="fas fa-images"></i></button>
-                        <button id="img-count" class="opacity-0 off pointer" data-count="1">
+                        <button id="img-count" class="pointer" data-count="1">
                             <i class="fas fa-image"></i>
                         </button>
                     </div>
@@ -261,8 +261,8 @@
                         </div>
                         <div id="img-preview-slide" class="img-preview-slide flex-center gap-10 w-100 p-10 pb-2"></div>
                         <div id="preview-btn" class="flex-evenly gap-10 p-10">
-                            <button id="clear-all" class="yellow p-10 w-50 borad-5"><i class="fas fa-trash"></i> Clear All</button>
-                            <button id="upload-all" class="green p-10 w-50 borad-5"><i class="fas fa-upload"></i> Upload</button>
+                            <button id="clear-all" class="default p-10 w-50 borad-5"><i class="fas fa-trash"></i> Clear All</button>
+                            <button id="upload-all" class="default p-10 w-50 borad-5"><i class="fas fa-upload"></i> Upload</button>
                             <button id="preview-close" class="default pv-10 br-none ph-20 w-50 borad-5"><i class="fas fa-upload"></i> Back</button>
                         </div>
                     </div>
@@ -342,7 +342,7 @@
     <script src="/js/class.js"></script>
     <script>
         //new MainController().init()
-        //new ImageCaptureManager()
+        new ImageCaptureManager()
         document.querySelector(".hamburger")
             .addEventListener("click", function() {
                 this.classList.toggle("is-active");

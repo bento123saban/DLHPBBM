@@ -801,40 +801,94 @@ class ImageCaptureManager {
         this.devices = [];
         this.currentDeviceIndex = 0;
         this.stream = null;
+        this._msgTimeout = null;
 
         this.initCameraAndEvents();
     }
 
+    get currentDeviceId() {
+        return this.devices[this.currentDeviceIndex]?.deviceId || null;
+    }
+
     async initCameraAndEvents() {
         try {
+            // WAJIB: minta izin dulu biar device list lengkap
+            await navigator.mediaDevices.getUserMedia({ video: true });
+
             this.devices = (await navigator.mediaDevices.enumerateDevices())
                 .filter(d => d.kind === "videoinput");
 
+            console.log(`📷 Detected ${this.devices.length} camera(s):`);
+            this.devices.forEach((d, i) => {
+                console.log(`  [${i}] ${d.label || "(label kosong)"} → ${d.deviceId}`);
+            });
+
             if (!this.devices.length) throw new Error("Tidak ada kamera ditemukan");
 
-            await this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
-
-            this.captureBtn.addEventListener("click", () => this._captureImage());
-            this.switchBtn.addEventListener("click", () => this._switchCamera());
-            this.countBtn.addEventListener("click", () => this._handleCountBtn());
-            this.clearBtn.addEventListener("click", () => this.clearAll());
-            this.prevClose.addEventListener("click", () => this._previewClose());
-            this.uploadBtn.addEventListener("click", () => this._handleUpload());
-
-            document.addEventListener("visibilitychange", () => {
-                if (document.hidden) {
-                    this._stopCamera();
-                } else if (this.previewBox.classList.contains("dis-none")) {
-                    this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
-                }
-            });
+            this._updateSwitchButtonVisibility();
+            await this._startCamera(this.currentDeviceId);
+            this._bindEvents();
         } catch (err) {
-            this._showMessage("Kamera gagal dimuat");
-            console.error(err);
+            this._showMessage("❌ Gagal inisialisasi kamera");
+            console.error("❌ initCameraAndEvents error:", err);
         }
     }
 
-    async _startCamera(deviceId) {
+    _bindEvents() {
+        this.captureBtn.addEventListener("click", () => this._captureImage());
+        this.switchBtn.addEventListener("click", () => this._switchCamera());
+        this.countBtn.addEventListener("click", () => this._handleCountBtn());
+        this.clearBtn.addEventListener("click", () => this.clearAll());
+        this.prevClose.addEventListener("click", () => this._previewClose());
+        this.uploadBtn.addEventListener("click", () => this._handleUpload());
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                this._stopCamera();
+            } else if (this.previewBox.classList.contains("dis-none")) {
+                this._startCamera(this.currentDeviceId);
+            }
+        });
+    }
+
+    _updateSwitchButtonVisibility() {
+        const multipleCams = this.devices.length > 1;
+        this.switchBtn.classList.toggle('opacity-0', !multipleCams);
+        this.switchBtn.classList.toggle('off', !multipleCams);
+    }
+
+    async _switchCamera() {
+        if (this.switchBtn.classList.contains("off")) return;
+
+        if (this.devices.length < 2) {
+            this._showMessage("Hanya 1 kamera tersedia");
+            return;
+        }
+
+        const prevId = this.currentDeviceId;
+        this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
+        const nextId = this.currentDeviceId;
+
+        console.log(`🔄 Switching camera: ${prevId} → ${nextId}`);
+
+        if (prevId === nextId) {
+            this._showMessage("⚠️ Kamera tidak berubah");
+            return;
+        }
+
+        try {
+            await this._startCamera(nextId);
+        } catch (err) {
+            console.warn("❌ Gagal switch kamera, fallback ke default");
+            this._showMessage("❌ Gagal ganti kamera, coba ulang");
+            await this._startCamera(); // fallback ke default
+        }
+    }
+
+    async _startCamera(deviceId = null) {
+        this._stopCamera();
+        console.log("🚀 Mulai kamera:", deviceId || "(default)");
+
         try {
             const constraints = deviceId
                 ? { video: { deviceId: { exact: deviceId } }, audio: false }
@@ -842,21 +896,22 @@ class ImageCaptureManager {
 
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.video.srcObject = this.stream;
+
+            const track = this.stream.getVideoTracks()[0];
+            console.log("✅ Kamera aktif:", track.label || "(label kosong)");
         } catch (err) {
-            console.warn("Fallback ke kamera default...");
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                this.video.srcObject = this.stream;
-            } catch (fallbackErr) {
-                console.error("Fallback gagal:", fallbackErr);
-                this._showMessage("Kamera tidak bisa dinyalakan");
-            }
+            console.error("❌ Error saat startCamera:", err);
+            this._showMessage("❌ Kamera tidak bisa dinyalakan");
+            throw err;
         }
     }
 
     _stopCamera() {
         if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
+            this.stream.getTracks().forEach(track => {
+                track.stop();
+                console.log("🛑 Stop track:", track.label);
+            });
             this.stream = null;
         }
         this.video.srcObject = null;
@@ -915,7 +970,7 @@ class ImageCaptureManager {
 
     _previewClose() {
         this.previewBox.classList.add("dis-none");
-        this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId); // ⬅️ Start lagi
+        this._startCamera(this.currentDeviceId);
     }
 
     _updateCountBadge() {
@@ -923,16 +978,6 @@ class ImageCaptureManager {
         this.countBtn.dataset.count = count || "";
         this.countBtn.classList.toggle("opacity-0", !count);
         this.countBtn.classList.toggle("off", !count);
-    }
-
-    async _switchCamera() {
-        if (this.devices.length < 2) {
-            this._showMessage("Hanya 1 kamera tersedia");
-            return;
-        }
-
-        this.currentDeviceIndex = (this.currentDeviceIndex + 1) % this.devices.length;
-        await this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId);
     }
 
     _handleCountBtn() {
@@ -963,10 +1008,7 @@ class ImageCaptureManager {
         }
 
         this._showMessage("Upload belum diimplementasi");
-    }
-
-    getCapturedImages() {
-        return this.images;
+        // Implementasi upload di sini
     }
 
     clearAll() {
@@ -974,11 +1016,13 @@ class ImageCaptureManager {
         this._updatePreview();
         this._updateCountBadge();
         this._showMessage("Semua gambar dihapus");
+        this._startCamera(this.currentDeviceId);
+    }
 
-        this._startCamera(this.devices[this.currentDeviceIndex]?.deviceId); // ⬅️ Start lagi
+    getCapturedImages() {
+        return this.images;
     }
 }
-
 
 
 window.addEventListener("DOMContentLoaded", () => {

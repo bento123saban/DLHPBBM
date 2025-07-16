@@ -444,10 +444,6 @@ nav {
 .hamburger-inner::before {
     background: linear-gradient(45deg, white,  lightgray) !important;}
 
-#content-box {
-    height: calc(100vh);
-    position: relative;
-}
 
 .content {
     height: 100%;
@@ -1125,7 +1121,7 @@ textarea {
 #data-images {
     background: linear-gradient(45deg, white, transparent);
     backdrop-filter: blur(3px);
-    z-index: 1000000000;
+    z-index: 100;
     position: fixed;
     top: 0;
     left: 0;
@@ -1134,8 +1130,8 @@ textarea {
 }
 .img-cam {
     position: relative;
-    width: clamp(250px, 100%, 500px);
-    height: clamp(250px, calc(100% - 80px), 500px);
+    width: clamp(250px, 100%, 450px);
+    height: clamp(250px, calc(100% - 80px), 700px);
     border: 2px solid white !important;
 }
 .img-cam-btn {
@@ -1143,7 +1139,6 @@ textarea {
     bottom: 0;
     left: 0;
 }
-
 .img-cam-btn button {
     width: 60px;
     aspect-ratio: 1;
@@ -1162,15 +1157,12 @@ textarea {
     color: white;
     font-size: 12px;
 }
-
 #img-capture {
     background: white;
     outline: 2px solid white;
     outline-offset: 5px;
     color: darkcyan;
 }
-
-
 #video {
     position: absolute;
     top: 0;
@@ -1210,4 +1202,7 @@ textarea {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+#preview-btn button {
+    
 }
